@@ -1,0 +1,28 @@
+--- old/src/java.base/windows/native/libjli/java_md.c	2019-12-02 13:16:27.325073300 -0500
++++ new/src/java.base/windows/native/libjli/java_md.c	2019-12-02 13:16:26.692041400 -0500
+@@ -34,6 +34,7 @@
+ #include <sys/stat.h>
+ #include <wtypes.h>
+ #include <commctrl.h>
++#include <assert.h>
+ 
+ #include <jni.h>
+ #include "java.h"
+@@ -1015,6 +1016,17 @@
+ 
+     // sanity check, match the args we have, to the holy grail
+     idx = JLI_GetAppArgIndex();
++
++    // First arg index is NOT_FOUND
++    if (idx < 0) {
++        // The only allowed value should be NOT_FOUND (-1) unless another change introduces 
++        // a different negative index
++        assert (idx == -1);
++        JLI_TraceLauncher("Warning: first app arg index not found, %d\n", idx);
++        JLI_TraceLauncher("passing arguments as-is.\n");
++        return NewPlatformStringArray(env, strv, argc);
++    }
++
+     isTool = (idx == 0);
+     if (isTool) { idx++; } // skip tool name
+     JLI_TraceLauncher("AppArgIndex: %d points to %s\n", idx, stdargs[idx].arg);

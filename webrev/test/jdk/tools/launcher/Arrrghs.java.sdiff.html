@@ -1,0 +1,481 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff test/jdk/tools/launcher </title>
+</head><body id="SUNWwebrev">
+<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> next &gt</center>
+<h2>test/jdk/tools/launcher/Arrrghs.java</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 /**
+  25  * @test
+  26  * @bug 5030233 6214916 6356475 6571029 6684582 6742159 4459600 6758881 6753938
+  27  *      6894719 6968053 7151434 7146424 8007333 8077822 8143640 8132379 8218547
+
+  28  * @summary Argument parsing validation.
+  29  * @modules jdk.compiler
+  30  *          jdk.zipfs
+  31  * @compile -XDignore.symbol.file Arrrghs.java
+  32  * @run main/othervm Arrrghs
+  33  */
+  34 
+  35 
+  36 import java.io.File;
+  37 import java.io.FileNotFoundException;
+  38 import java.io.IOException;
+  39 import java.nio.file.Files;
+  40 import java.nio.file.Paths;
+  41 import java.nio.file.Path;
+  42 import java.util.ArrayList;
+  43 import java.util.Arrays;
+  44 import java.util.HashMap;
+  45 import java.util.List;
+  46 import java.util.Map;
+  47 import java.util.regex.Matcher;
+
+</pre><hr></hr><pre>
+ 618                 (String[])null);
+ 619         tr = doExec(javaCmd, "-Xdiag", "-jar", "some.jar");
+ 620         tr.contains("Error: Could not find or load main class MIA");
+ 621         tr.contains("java.lang.ClassNotFoundException: MIA");
+ 622         if (!tr.testStatus)
+ 623             System.out.println(tr);
+ 624 
+ 625         // use classpath to check
+ 626         tr = doExec(javaCmd,  "-Xdiag", "-cp", "some.jar", "MIA");
+ 627         tr.contains("Error: Could not find or load main class MIA");
+ 628         tr.contains("java.lang.ClassNotFoundException: MIA");
+ 629         if (!tr.testStatus)
+ 630             System.out.println(tr);
+ 631 
+ 632         // a missing class on the classpath
+ 633         tr = doExec(javaCmd, "-Xdiag", "NonExistentClass");
+ 634         tr.contains("Error: Could not find or load main class NonExistentClass");
+ 635         tr.contains("java.lang.ClassNotFoundException: NonExistentClass");
+ 636         if (!tr.testStatus)
+ 637             System.out.println(tr);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 638     }
+ 639 
+ 640     /**
+ 641      * @param args the command line arguments
+ 642      * @throws java.io.FileNotFoundException
+ 643      */
+ 644     public static void main(String[] args) throws Exception {
+ 645         if (debug) {
+ 646             System.out.println("Starting Arrrghs tests");
+ 647         }
+ 648         Arrrghs a = new Arrrghs();
+ 649         a.run(args);
+ 650         if (testExitValue &gt; 0) {
+ 651             System.out.println("Total of " + testExitValue + " failed");
+ 652             System.exit(1);
+ 653         } else {
+ 654             System.out.println("All tests pass");
+ 655         }
+ 656     }
+ 657 }
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 /**
+  25  * @test
+  26  * @bug 5030233 6214916 6356475 6571029 6684582 6742159 4459600 6758881 6753938
+  27  *      6894719 6968053 7151434 7146424 8007333 8077822 8143640 8132379 8218547
+<span class="new">  28  *      8234076</span>
+  29  * @summary Argument parsing validation.
+  30  * @modules jdk.compiler
+  31  *          jdk.zipfs
+  32  * @compile -XDignore.symbol.file Arrrghs.java
+  33  * @run main/othervm Arrrghs
+  34  */
+  35 
+  36 
+  37 import java.io.File;
+  38 import java.io.FileNotFoundException;
+  39 import java.io.IOException;
+  40 import java.nio.file.Files;
+  41 import java.nio.file.Paths;
+  42 import java.nio.file.Path;
+  43 import java.util.ArrayList;
+  44 import java.util.Arrays;
+  45 import java.util.HashMap;
+  46 import java.util.List;
+  47 import java.util.Map;
+  48 import java.util.regex.Matcher;
+
+</pre><hr></hr><pre>
+ 619                 (String[])null);
+ 620         tr = doExec(javaCmd, "-Xdiag", "-jar", "some.jar");
+ 621         tr.contains("Error: Could not find or load main class MIA");
+ 622         tr.contains("java.lang.ClassNotFoundException: MIA");
+ 623         if (!tr.testStatus)
+ 624             System.out.println(tr);
+ 625 
+ 626         // use classpath to check
+ 627         tr = doExec(javaCmd,  "-Xdiag", "-cp", "some.jar", "MIA");
+ 628         tr.contains("Error: Could not find or load main class MIA");
+ 629         tr.contains("java.lang.ClassNotFoundException: MIA");
+ 630         if (!tr.testStatus)
+ 631             System.out.println(tr);
+ 632 
+ 633         // a missing class on the classpath
+ 634         tr = doExec(javaCmd, "-Xdiag", "NonExistentClass");
+ 635         tr.contains("Error: Could not find or load main class NonExistentClass");
+ 636         tr.contains("java.lang.ClassNotFoundException: NonExistentClass");
+ 637         if (!tr.testStatus)
+ 638             System.out.println(tr);
+<span class="new"> 639     }</span>
+<span class="new"> 640 </span>
+<span class="new"> 641     private void initModulesDir(File modulesDir) throws IOException {</span>
+<span class="new"> 642         if (modulesDir.exists()) {</span>
+<span class="new"> 643             recursiveDelete(modulesDir);</span>
+<span class="new"> 644         }</span>
+<span class="new"> 645 </span>
+<span class="new"> 646         modulesDir.mkdirs();</span>
+<span class="new"> 647         File srcDir = new File(modulesDir, "src");</span>
+<span class="new"> 648         File modsDir = new File(modulesDir, "mods");</span>
+<span class="new"> 649         File testDir = new File(srcDir, "test");</span>
+<span class="new"> 650         File launcherTestDir = new File(testDir, "launcher");</span>
+<span class="new"> 651         srcDir.mkdir();</span>
+<span class="new"> 652         modsDir.mkdir();</span>
+<span class="new"> 653         testDir.mkdir();</span>
+<span class="new"> 654         launcherTestDir.mkdir();</span>
+<span class="new"> 655 </span>
+<span class="new"> 656         ArrayList&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();</span>
+<span class="new"> 657         scratchpad.add("module test {}");</span>
+<span class="new"> 658         createFile(new File(testDir, "module-info.java"), scratchpad);</span>
+<span class="new"> 659 </span>
+<span class="new"> 660         scratchpad.clear();</span>
+<span class="new"> 661         scratchpad.add("package launcher;");</span>
+<span class="new"> 662         scratchpad.add("import java.util.Arrays;");</span>
+<span class="new"> 663         scratchpad.add("public class Main {");</span>
+<span class="new"> 664         scratchpad.add("public static void main(String[] args) {");</span>
+<span class="new"> 665         scratchpad.add("System.out.println(Arrays.toString(args));");</span>
+<span class="new"> 666         scratchpad.add("}");</span>
+<span class="new"> 667         scratchpad.add("}");</span>
+<span class="new"> 668         createFile(new File(launcherTestDir, "Main.java"), scratchpad);</span>
+<span class="new"> 669     }</span>
+<span class="new"> 670 </span>
+<span class="new"> 671     /*</span>
+<span class="new"> 672      * These tests are not expected to work on *nixes, and are ignored.</span>
+<span class="new"> 673      */</span>
+<span class="new"> 674     @Test</span>
+<span class="new"> 675     void testForNegativeArgumentIndex() throws IOException {</span>
+<span class="new"> 676         if (!isWindows)</span>
+<span class="new"> 677             return;</span>
+<span class="new"> 678         File cwd = new File(".");</span>
+<span class="new"> 679         File testModuleDir = new File(cwd, "modules_test");</span>
+<span class="new"> 680         initModulesDir(testModuleDir);</span>
+<span class="new"> 681 </span>
+<span class="new"> 682         Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");</span>
+<span class="new"> 683         Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");</span>
+<span class="new"> 684     </span>
+<span class="new"> 685         // test module / main class</span>
+<span class="new"> 686         String TEST_MODULE = "test";</span>
+<span class="new"> 687     </span>
+<span class="new"> 688         // javac -d mods/test src/test/**</span>
+<span class="new"> 689         TestResult tr = doExec(</span>
+<span class="new"> 690             javacCmd, </span>
+<span class="new"> 691             "-d", MODS_DIR.toString(), </span>
+<span class="new"> 692             "--module-source-path", SRC_DIR.toString(),</span>
+<span class="new"> 693             "--module", TEST_MODULE);</span>
+<span class="new"> 694 </span>
+<span class="new"> 695         if (!tr.isOK()) {</span>
+<span class="new"> 696             System.out.println("test did not compile");</span>
+<span class="new"> 697             throw new RuntimeException("Error: modules test did not compile");</span>
+<span class="new"> 698         }</span>
+<span class="new"> 699 </span>
+<span class="new"> 700         Map&lt;String, String&gt; env = new HashMap&lt;&gt;();</span>
+<span class="new"> 701         env.put(JLDEBUG_KEY, "true");</span>
+<span class="new"> 702 </span>
+<span class="new"> 703         // Run with unsupported module command line option</span>
+<span class="new"> 704         tr = doExec(</span>
+<span class="new"> 705             env, </span>
+<span class="new"> 706             javaCmd, </span>
+<span class="new"> 707             "--module-path=" + MODS_DIR.toString(), </span>
+<span class="new"> 708             "--module=test/launcher.Main", </span>
+<span class="new"> 709             "--help"</span>
+<span class="new"> 710         );</span>
+<span class="new"> 711 </span>
+<span class="new"> 712         // There will be no known application arguments</span>
+<span class="new"> 713         tr.contains("Warning: first app arg index not found, -1");</span>
+<span class="new"> 714         if (!tr.testStatus) {</span>
+<span class="new"> 715             System.out.println("Error: Didn't find arg index of -1");</span>
+<span class="new"> 716             System.out.println(tr);</span>
+<span class="new"> 717         }</span>
+<span class="new"> 718 </span>
+<span class="new"> 719         // There will be no argument expansion performed</span>
+<span class="new"> 720         tr.notContains("F--help");</span>
+<span class="new"> 721         if (!tr.testStatus) {</span>
+<span class="new"> 722             System.out.println("Error: Somehow we processed application arguments, not expecting to see F--help");</span>
+<span class="new"> 723             System.out.println(tr);</span>
+<span class="new"> 724         }</span>
+<span class="new"> 725 </span>
+<span class="new"> 726         // Run with the supported module command line option</span>
+<span class="new"> 727         tr = doExec(</span>
+<span class="new"> 728             env, </span>
+<span class="new"> 729             javaCmd, </span>
+<span class="new"> 730             "--module-path=" + MODS_DIR.toString(), </span>
+<span class="new"> 731             "--module", "test/launcher.Main", </span>
+<span class="new"> 732             "--help"</span>
+<span class="new"> 733         );</span>
+<span class="new"> 734 </span>
+<span class="new"> 735         // We should find argument index</span>
+<span class="new"> 736         tr.contains("AppArgIndex: 4 points to --help");</span>
+<span class="new"> 737         if (!tr.testStatus) {</span>
+<span class="new"> 738             System.out.println("Error: Didn't find app arg index of 4 pointing to --help");</span>
+<span class="new"> 739             System.out.println(tr);</span>
+<span class="new"> 740         }</span>
+<span class="new"> 741         </span>
+<span class="new"> 742         // We should do proper argument expansion</span>
+<span class="new"> 743         tr.contains("F--help");</span>
+<span class="new"> 744         if (!tr.testStatus) {</span>
+<span class="new"> 745             System.out.println("Error: Didn't process application arguments properly, expecting to see F--help");</span>
+<span class="new"> 746             System.out.println(tr);</span>
+<span class="new"> 747         }</span>
+ 748     }
+ 749 
+ 750     /**
+ 751      * @param args the command line arguments
+ 752      * @throws java.io.FileNotFoundException
+ 753      */
+ 754     public static void main(String[] args) throws Exception {
+ 755         if (debug) {
+ 756             System.out.println("Starting Arrrghs tests");
+ 757         }
+ 758         Arrrghs a = new Arrrghs();
+ 759         a.run(args);
+ 760         if (testExitValue &gt; 0) {
+ 761             System.out.println("Total of " + testExitValue + " failed");
+ 762             System.exit(1);
+ 763         } else {
+ 764             System.out.println("All tests pass");
+ 765         }
+ 766     }
+ 767 }
+</pre></td>
+</tr></table>
+<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> next &gt</center>
+</body></html>

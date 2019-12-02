@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Udiff src/java.base/windows/native/libjli/java_md.c</title>
+
+<style type="text/css" media="screen">
+span.new {
+    color: blue;
+    font-weight: normal;
+}
+</style>
+
+</head>
+<body id="SUNWwebrev">
+<center>&lt prev <a href='../../../../../index.html' target='_top'>index</a> <a href='../../../../../test/jdk/tools/launcher/Arrrghs.java.udiff.html' target='_top'>next &gt</a></center>
+<h2>src/java.base/windows/native/libjli/java_md.c</h2>
+        <a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+        <pre>
+</pre><hr /><pre>
+<span class="newmarker">@@ -32,10 +32,11 @@</span>
+ #include &lt;string.h&gt;
+ #include &lt;sys/types.h&gt;
+ #include &lt;sys/stat.h&gt;
+ #include &lt;wtypes.h&gt;
+ #include &lt;commctrl.h&gt;
+<span class="new">+#include &lt;assert.h&gt;</span>
+ 
+ #include &lt;jni.h&gt;
+ #include "java.h"
+ 
+ #define JVM_DLL "jvm.dll"
+</pre><hr /><pre>
+<span class="newmarker">@@ -1013,10 +1014,21 @@</span>
+         return NewPlatformStringArray(env, strv, argc);
+     }
+ 
+     // sanity check, match the args we have, to the holy grail
+     idx = JLI_GetAppArgIndex();
+<span class="new">+</span>
+<span class="new">+    // First arg index is NOT_FOUND</span>
+<span class="new">+    if (idx &lt; 0) {</span>
+<span class="new">+        // The only allowed value should be NOT_FOUND (-1) unless another change introduces </span>
+<span class="new">+        // a different negative index</span>
+<span class="new">+        assert (idx == -1);</span>
+<span class="new">+        JLI_TraceLauncher("Warning: first app arg index not found, %d\n", idx);</span>
+<span class="new">+        JLI_TraceLauncher("passing arguments as-is.\n");</span>
+<span class="new">+        return NewPlatformStringArray(env, strv, argc);</span>
+<span class="new">+    }</span>
+<span class="new">+</span>
+     isTool = (idx == 0);
+     if (isTool) { idx++; } // skip tool name
+     JLI_TraceLauncher("AppArgIndex: %d points to %s\n", idx, stdargs[idx].arg);
+ 
+     appArgIdx = calloc(argc, sizeof(int));
+</pre>
+<center>&lt prev <a href='../../../../../index.html' target='_top'>index</a> <a href='../../../../../test/jdk/tools/launcher/Arrrghs.java.udiff.html' target='_top'>next &gt</a></center>
+</body></html>
+

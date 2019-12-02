@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff src/java.base/windows/native/libjli </title>
+</head><body id="SUNWwebrev">
+<center>&lt prev <a href='../../../../../index.html' target='_top'>index</a> <a href='../../../../../test/jdk/tools/launcher/Arrrghs.java.sdiff.html' target='_top'>next &gt</a></center>
+<h2>src/java.base/windows/native/libjli/java_md.c</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 
+  26 #include &lt;windows.h&gt;
+  27 #include &lt;io.h&gt;
+  28 #include &lt;process.h&gt;
+  29 #include &lt;stdlib.h&gt;
+  30 #include &lt;stdio.h&gt;
+  31 #include &lt;stdarg.h&gt;
+  32 #include &lt;string.h&gt;
+  33 #include &lt;sys/types.h&gt;
+  34 #include &lt;sys/stat.h&gt;
+  35 #include &lt;wtypes.h&gt;
+  36 #include &lt;commctrl.h&gt;
+
+  37 
+  38 #include &lt;jni.h&gt;
+  39 #include "java.h"
+  40 
+  41 #define JVM_DLL "jvm.dll"
+  42 #define JAVA_DLL "java.dll"
+  43 
+  44 /*
+  45  * Prototypes.
+  46  */
+  47 static jboolean GetJVMPath(const char *jrepath, const char *jvmtype,
+  48                            char *jvmpath, jint jvmpathsize);
+  49 static jboolean GetJREPath(char *path, jint pathsize);
+  50 
+  51 #ifdef USE_REGISTRY_LOOKUP
+  52 jboolean GetPublicJREHome(char *buf, jint bufsize);
+  53 #endif
+  54 
+  55 /* We supports warmup for UI stack that is performed in parallel
+  56  * to VM initialization.
+
+</pre><hr></hr><pre>
+ 998     int isTool;
+ 999     jclass cls = GetLauncherHelperClass(env);
+1000     NULL_CHECK0(cls);
+1001 
+1002     if (argc == 0) {
+1003         return NewPlatformStringArray(env, strv, argc);
+1004     }
+1005     // the holy grail we need to compare with.
+1006     stdargs = JLI_GetStdArgs();
+1007     stdargc = JLI_GetStdArgc();
+1008 
+1009     // sanity check, this should never happen
+1010     if (argc &gt; stdargc) {
+1011         JLI_TraceLauncher("Warning: app args is larger than the original, %d %d\n", argc, stdargc);
+1012         JLI_TraceLauncher("passing arguments as-is.\n");
+1013         return NewPlatformStringArray(env, strv, argc);
+1014     }
+1015 
+1016     // sanity check, match the args we have, to the holy grail
+1017     idx = JLI_GetAppArgIndex();
+
+
+
+
+
+
+
+
+
+
+
+1018     isTool = (idx == 0);
+1019     if (isTool) { idx++; } // skip tool name
+1020     JLI_TraceLauncher("AppArgIndex: %d points to %s\n", idx, stdargs[idx].arg);
+1021 
+1022     appArgIdx = calloc(argc, sizeof(int));
+1023     for (i = idx, j = 0; i &lt; stdargc; i++) {
+1024         if (isTool) { // filter -J used by tools to pass JVM options
+1025             arg = stdargs[i].arg;
+1026             if (arg[0] == '-' &amp;&amp; arg[1] == 'J') {
+1027                 continue;
+1028             }
+1029         }
+1030         appArgIdx[j++] = i;
+1031     }
+1032     // sanity check, ensure same number of arguments for application
+1033     if (j != argc) {
+1034         JLI_TraceLauncher("Warning: app args count doesn't match, %d %d\n", j, argc);
+1035         JLI_TraceLauncher("passing arguments as-is.\n");
+1036         JLI_MemFree(appArgIdx);
+1037         return NewPlatformStringArray(env, strv, argc);
+
+</pre><hr></hr>
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 
+  26 #include &lt;windows.h&gt;
+  27 #include &lt;io.h&gt;
+  28 #include &lt;process.h&gt;
+  29 #include &lt;stdlib.h&gt;
+  30 #include &lt;stdio.h&gt;
+  31 #include &lt;stdarg.h&gt;
+  32 #include &lt;string.h&gt;
+  33 #include &lt;sys/types.h&gt;
+  34 #include &lt;sys/stat.h&gt;
+  35 #include &lt;wtypes.h&gt;
+  36 #include &lt;commctrl.h&gt;
+<span class="new">  37 #include &lt;assert.h&gt;</span>
+  38 
+  39 #include &lt;jni.h&gt;
+  40 #include "java.h"
+  41 
+  42 #define JVM_DLL "jvm.dll"
+  43 #define JAVA_DLL "java.dll"
+  44 
+  45 /*
+  46  * Prototypes.
+  47  */
+  48 static jboolean GetJVMPath(const char *jrepath, const char *jvmtype,
+  49                            char *jvmpath, jint jvmpathsize);
+  50 static jboolean GetJREPath(char *path, jint pathsize);
+  51 
+  52 #ifdef USE_REGISTRY_LOOKUP
+  53 jboolean GetPublicJREHome(char *buf, jint bufsize);
+  54 #endif
+  55 
+  56 /* We supports warmup for UI stack that is performed in parallel
+  57  * to VM initialization.
+
+</pre><hr></hr><pre>
+ 999     int isTool;
+1000     jclass cls = GetLauncherHelperClass(env);
+1001     NULL_CHECK0(cls);
+1002 
+1003     if (argc == 0) {
+1004         return NewPlatformStringArray(env, strv, argc);
+1005     }
+1006     // the holy grail we need to compare with.
+1007     stdargs = JLI_GetStdArgs();
+1008     stdargc = JLI_GetStdArgc();
+1009 
+1010     // sanity check, this should never happen
+1011     if (argc &gt; stdargc) {
+1012         JLI_TraceLauncher("Warning: app args is larger than the original, %d %d\n", argc, stdargc);
+1013         JLI_TraceLauncher("passing arguments as-is.\n");
+1014         return NewPlatformStringArray(env, strv, argc);
+1015     }
+1016 
+1017     // sanity check, match the args we have, to the holy grail
+1018     idx = JLI_GetAppArgIndex();
+<span class="new">1019 </span>
+<span class="new">1020     // First arg index is NOT_FOUND</span>
+<span class="new">1021     if (idx &lt; 0) {</span>
+<span class="new">1022         // The only allowed value should be NOT_FOUND (-1) unless another change introduces </span>
+<span class="new">1023         // a different negative index</span>
+<span class="new">1024         assert (idx == -1);</span>
+<span class="new">1025         JLI_TraceLauncher("Warning: first app arg index not found, %d\n", idx);</span>
+<span class="new">1026         JLI_TraceLauncher("passing arguments as-is.\n");</span>
+<span class="new">1027         return NewPlatformStringArray(env, strv, argc);</span>
+<span class="new">1028     }</span>
+<span class="new">1029 </span>
+1030     isTool = (idx == 0);
+1031     if (isTool) { idx++; } // skip tool name
+1032     JLI_TraceLauncher("AppArgIndex: %d points to %s\n", idx, stdargs[idx].arg);
+1033 
+1034     appArgIdx = calloc(argc, sizeof(int));
+1035     for (i = idx, j = 0; i &lt; stdargc; i++) {
+1036         if (isTool) { // filter -J used by tools to pass JVM options
+1037             arg = stdargs[i].arg;
+1038             if (arg[0] == '-' &amp;&amp; arg[1] == 'J') {
+1039                 continue;
+1040             }
+1041         }
+1042         appArgIdx[j++] = i;
+1043     }
+1044     // sanity check, ensure same number of arguments for application
+1045     if (j != argc) {
+1046         JLI_TraceLauncher("Warning: app args count doesn't match, %d %d\n", j, argc);
+1047         JLI_TraceLauncher("passing arguments as-is.\n");
+1048         JLI_MemFree(appArgIdx);
+1049         return NewPlatformStringArray(env, strv, argc);
+
+</pre><hr></hr>
+</pre></td>
+</tr></table>
+<center>&lt prev <a href='../../../../../index.html' target='_top'>index</a> <a href='../../../../../test/jdk/tools/launcher/Arrrghs.java.sdiff.html' target='_top'>next &gt</a></center>
+</body></html>

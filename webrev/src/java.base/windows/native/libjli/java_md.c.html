@@ -1,0 +1,1181 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>New src/java.base/windows/native/libjli/java_md.c</title>
+<body id="SUNWwebrev">
+<pre>
+   1 /*
+   2  * Copyright (c) 1997, 2019, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.  Oracle designates this
+   8  * particular file as subject to the "Classpath" exception as provided
+   9  * by Oracle in the LICENSE file that accompanied this code.
+  10  *
+  11  * This code is distributed in the hope that it will be useful, but WITHOUT
+  12  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  13  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  14  * version 2 for more details (a copy is included in the LICENSE file that
+  15  * accompanied this code).
+  16  *
+  17  * You should have received a copy of the GNU General Public License version
+  18  * 2 along with this work; if not, write to the Free Software Foundation,
+  19  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  20  *
+  21  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  22  * or visit www.oracle.com if you need additional information or have any
+  23  * questions.
+  24  */
+  25 
+  26 #include &lt;windows.h&gt;
+  27 #include &lt;io.h&gt;
+  28 #include &lt;process.h&gt;
+  29 #include &lt;stdlib.h&gt;
+  30 #include &lt;stdio.h&gt;
+  31 #include &lt;stdarg.h&gt;
+  32 #include &lt;string.h&gt;
+  33 #include &lt;sys/types.h&gt;
+  34 #include &lt;sys/stat.h&gt;
+  35 #include &lt;wtypes.h&gt;
+  36 #include &lt;commctrl.h&gt;
+  37 #include &lt;assert.h&gt;
+  38 
+  39 #include &lt;jni.h&gt;
+  40 #include "java.h"
+  41 
+  42 #define JVM_DLL "jvm.dll"
+  43 #define JAVA_DLL "java.dll"
+  44 
+  45 /*
+  46  * Prototypes.
+  47  */
+  48 static jboolean GetJVMPath(const char *jrepath, const char *jvmtype,
+  49                            char *jvmpath, jint jvmpathsize);
+  50 static jboolean GetJREPath(char *path, jint pathsize);
+  51 
+  52 #ifdef USE_REGISTRY_LOOKUP
+  53 jboolean GetPublicJREHome(char *buf, jint bufsize);
+  54 #endif
+  55 
+  56 /* We supports warmup for UI stack that is performed in parallel
+  57  * to VM initialization.
+  58  * This helps to improve startup of UI application as warmup phase
+  59  * might be long due to initialization of OS or hardware resources.
+  60  * It is not CPU bound and therefore it does not interfere with VM init.
+  61  * Obviously such warmup only has sense for UI apps and therefore it needs
+  62  * to be explicitly requested by passing -Dsun.awt.warmup=true property
+  63  * (this is always the case for plugin/javaws).
+  64  *
+  65  * Implementation launches new thread after VM starts and use it to perform
+  66  * warmup code (platform dependent).
+  67  * This thread is later reused as AWT toolkit thread as graphics toolkit
+  68  * often assume that they are used from the same thread they were launched on.
+  69  *
+  70  * At the moment we only support warmup for D3D. It only possible on windows
+  71  * and only if other flags do not prohibit this (e.g. OpenGL support requested).
+  72  */
+  73 #undef ENABLE_AWT_PRELOAD
+  74 #ifndef JAVA_ARGS /* turn off AWT preloading for javac, jar, etc */
+  75     /* CR6999872: fastdebug crashes if awt library is loaded before JVM is
+  76      * initialized*/
+  77     #if !defined(DEBUG)
+  78         #define ENABLE_AWT_PRELOAD
+  79     #endif
+  80 #endif
+  81 
+  82 #ifdef ENABLE_AWT_PRELOAD
+  83 /* "AWT was preloaded" flag;
+  84  * turned on by AWTPreload().
+  85  */
+  86 int awtPreloaded = 0;
+  87 
+  88 /* Calls a function with the name specified
+  89  * the function must be int(*fn)(void).
+  90  */
+  91 int AWTPreload(const char *funcName);
+  92 /* stops AWT preloading */
+  93 void AWTPreloadStop();
+  94 
+  95 /* D3D preloading */
+  96 /* -1: not initialized; 0: OFF, 1: ON */
+  97 int awtPreloadD3D = -1;
+  98 /* command line parameter to swith D3D preloading on */
+  99 #define PARAM_PRELOAD_D3D "-Dsun.awt.warmup"
+ 100 /* D3D/OpenGL management parameters */
+ 101 #define PARAM_NODDRAW "-Dsun.java2d.noddraw"
+ 102 #define PARAM_D3D "-Dsun.java2d.d3d"
+ 103 #define PARAM_OPENGL "-Dsun.java2d.opengl"
+ 104 /* funtion in awt.dll (src/windows/native/sun/java2d/d3d/D3DPipelineManager.cpp) */
+ 105 #define D3D_PRELOAD_FUNC "preloadD3D"
+ 106 
+ 107 /* Extracts value of a parameter with the specified name
+ 108  * from command line argument (returns pointer in the argument).
+ 109  * Returns NULL if the argument does not contains the parameter.
+ 110  * e.g.:
+ 111  * GetParamValue("theParam", "theParam=value") returns pointer to "value".
+ 112  */
+ 113 const char * GetParamValue(const char *paramName, const char *arg) {
+ 114     size_t nameLen = JLI_StrLen(paramName);
+ 115     if (JLI_StrNCmp(paramName, arg, nameLen) == 0) {
+ 116         /* arg[nameLen] is valid (may contain final NULL) */
+ 117         if (arg[nameLen] == '=') {
+ 118             return arg + nameLen + 1;
+ 119         }
+ 120     }
+ 121     return NULL;
+ 122 }
+ 123 
+ 124 /* Checks if commandline argument contains property specified
+ 125  * and analyze it as boolean property (true/false).
+ 126  * Returns -1 if the argument does not contain the parameter;
+ 127  * Returns 1 if the argument contains the parameter and its value is "true";
+ 128  * Returns 0 if the argument contains the parameter and its value is "false".
+ 129  */
+ 130 int GetBoolParamValue(const char *paramName, const char *arg) {
+ 131     const char * paramValue = GetParamValue(paramName, arg);
+ 132     if (paramValue != NULL) {
+ 133         if (JLI_StrCaseCmp(paramValue, "true") == 0) {
+ 134             return 1;
+ 135         }
+ 136         if (JLI_StrCaseCmp(paramValue, "false") == 0) {
+ 137             return 0;
+ 138         }
+ 139     }
+ 140     return -1;
+ 141 }
+ 142 #endif /* ENABLE_AWT_PRELOAD */
+ 143 
+ 144 
+ 145 static jboolean _isjavaw = JNI_FALSE;
+ 146 
+ 147 
+ 148 jboolean
+ 149 IsJavaw()
+ 150 {
+ 151     return _isjavaw;
+ 152 }
+ 153 
+ 154 /*
+ 155  *
+ 156  */
+ 157 void
+ 158 CreateExecutionEnvironment(int *pargc, char ***pargv,
+ 159                            char *jrepath, jint so_jrepath,
+ 160                            char *jvmpath, jint so_jvmpath,
+ 161                            char *jvmcfg,  jint so_jvmcfg) {
+ 162 
+ 163     char *jvmtype;
+ 164     int i = 0;
+ 165     char** argv = *pargv;
+ 166 
+ 167     /* Find out where the JRE is that we will be using. */
+ 168     if (!GetJREPath(jrepath, so_jrepath)) {
+ 169         JLI_ReportErrorMessage(JRE_ERROR1);
+ 170         exit(2);
+ 171     }
+ 172 
+ 173     JLI_Snprintf(jvmcfg, so_jvmcfg, "%s%slib%sjvm.cfg",
+ 174         jrepath, FILESEP, FILESEP);
+ 175 
+ 176     /* Find the specified JVM type */
+ 177     if (ReadKnownVMs(jvmcfg, JNI_FALSE) &lt; 1) {
+ 178         JLI_ReportErrorMessage(CFG_ERROR7);
+ 179         exit(1);
+ 180     }
+ 181 
+ 182     jvmtype = CheckJvmType(pargc, pargv, JNI_FALSE);
+ 183     if (JLI_StrCmp(jvmtype, "ERROR") == 0) {
+ 184         JLI_ReportErrorMessage(CFG_ERROR9);
+ 185         exit(4);
+ 186     }
+ 187 
+ 188     jvmpath[0] = '\0';
+ 189     if (!GetJVMPath(jrepath, jvmtype, jvmpath, so_jvmpath)) {
+ 190         JLI_ReportErrorMessage(CFG_ERROR8, jvmtype, jvmpath);
+ 191         exit(4);
+ 192     }
+ 193     /* If we got here, jvmpath has been correctly initialized. */
+ 194 
+ 195     /* Check if we need preload AWT */
+ 196 #ifdef ENABLE_AWT_PRELOAD
+ 197     argv = *pargv;
+ 198     for (i = 0; i &lt; *pargc ; i++) {
+ 199         /* Tests the "turn on" parameter only if not set yet. */
+ 200         if (awtPreloadD3D &lt; 0) {
+ 201             if (GetBoolParamValue(PARAM_PRELOAD_D3D, argv[i]) == 1) {
+ 202                 awtPreloadD3D = 1;
+ 203             }
+ 204         }
+ 205         /* Test parameters which can disable preloading if not already disabled. */
+ 206         if (awtPreloadD3D != 0) {
+ 207             if (GetBoolParamValue(PARAM_NODDRAW, argv[i]) == 1
+ 208                 || GetBoolParamValue(PARAM_D3D, argv[i]) == 0
+ 209                 || GetBoolParamValue(PARAM_OPENGL, argv[i]) == 1)
+ 210             {
+ 211                 awtPreloadD3D = 0;
+ 212                 /* no need to test the rest of the parameters */
+ 213                 break;
+ 214             }
+ 215         }
+ 216     }
+ 217 #endif /* ENABLE_AWT_PRELOAD */
+ 218 }
+ 219 
+ 220 
+ 221 static jboolean
+ 222 LoadMSVCRT()
+ 223 {
+ 224     // Only do this once
+ 225     static int loaded = 0;
+ 226     char crtpath[MAXPATHLEN];
+ 227 
+ 228     if (!loaded) {
+ 229         /*
+ 230          * The Microsoft C Runtime Library needs to be loaded first.  A copy is
+ 231          * assumed to be present in the "JRE path" directory.  If it is not found
+ 232          * there (or "JRE path" fails to resolve), skip the explicit load and let
+ 233          * nature take its course, which is likely to be a failure to execute.
+ 234          * The makefiles will provide the correct lib contained in quotes in the
+ 235          * macro MSVCR_DLL_NAME.
+ 236          */
+ 237 #ifdef MSVCR_DLL_NAME
+ 238         if (GetJREPath(crtpath, MAXPATHLEN)) {
+ 239             if (JLI_StrLen(crtpath) + JLI_StrLen("\\bin\\") +
+ 240                     JLI_StrLen(MSVCR_DLL_NAME) &gt;= MAXPATHLEN) {
+ 241                 JLI_ReportErrorMessage(JRE_ERROR11);
+ 242                 return JNI_FALSE;
+ 243             }
+ 244             (void)JLI_StrCat(crtpath, "\\bin\\" MSVCR_DLL_NAME);   /* Add crt dll */
+ 245             JLI_TraceLauncher("CRT path is %s\n", crtpath);
+ 246             if (_access(crtpath, 0) == 0) {
+ 247                 if (LoadLibrary(crtpath) == 0) {
+ 248                     JLI_ReportErrorMessage(DLL_ERROR4, crtpath);
+ 249                     return JNI_FALSE;
+ 250                 }
+ 251             }
+ 252         }
+ 253 #endif /* MSVCR_DLL_NAME */
+ 254 #ifdef MSVCP_DLL_NAME
+ 255         if (GetJREPath(crtpath, MAXPATHLEN)) {
+ 256             if (JLI_StrLen(crtpath) + JLI_StrLen("\\bin\\") +
+ 257                     JLI_StrLen(MSVCP_DLL_NAME) &gt;= MAXPATHLEN) {
+ 258                 JLI_ReportErrorMessage(JRE_ERROR11);
+ 259                 return JNI_FALSE;
+ 260             }
+ 261             (void)JLI_StrCat(crtpath, "\\bin\\" MSVCP_DLL_NAME);   /* Add prt dll */
+ 262             JLI_TraceLauncher("PRT path is %s\n", crtpath);
+ 263             if (_access(crtpath, 0) == 0) {
+ 264                 if (LoadLibrary(crtpath) == 0) {
+ 265                     JLI_ReportErrorMessage(DLL_ERROR4, crtpath);
+ 266                     return JNI_FALSE;
+ 267                 }
+ 268             }
+ 269         }
+ 270 #endif /* MSVCP_DLL_NAME */
+ 271         loaded = 1;
+ 272     }
+ 273     return JNI_TRUE;
+ 274 }
+ 275 
+ 276 
+ 277 /*
+ 278  * Find path to JRE based on .exe's location or registry settings.
+ 279  */
+ 280 jboolean
+ 281 GetJREPath(char *path, jint pathsize)
+ 282 {
+ 283     char javadll[MAXPATHLEN];
+ 284     struct stat s;
+ 285 
+ 286     if (GetApplicationHome(path, pathsize)) {
+ 287         /* Is JRE co-located with the application? */
+ 288         JLI_Snprintf(javadll, sizeof(javadll), "%s\\bin\\" JAVA_DLL, path);
+ 289         if (stat(javadll, &amp;s) == 0) {
+ 290             JLI_TraceLauncher("JRE path is %s\n", path);
+ 291             return JNI_TRUE;
+ 292         }
+ 293         /* ensure storage for path + \jre + NULL */
+ 294         if ((JLI_StrLen(path) + 4 + 1) &gt; (size_t) pathsize) {
+ 295             JLI_TraceLauncher("Insufficient space to store JRE path\n");
+ 296             return JNI_FALSE;
+ 297         }
+ 298         /* Does this app ship a private JRE in &lt;apphome&gt;\jre directory? */
+ 299         JLI_Snprintf(javadll, sizeof (javadll), "%s\\jre\\bin\\" JAVA_DLL, path);
+ 300         if (stat(javadll, &amp;s) == 0) {
+ 301             JLI_StrCat(path, "\\jre");
+ 302             JLI_TraceLauncher("JRE path is %s\n", path);
+ 303             return JNI_TRUE;
+ 304         }
+ 305     }
+ 306 
+ 307     /* Try getting path to JRE from path to JLI.DLL */
+ 308     if (GetApplicationHomeFromDll(path, pathsize)) {
+ 309         JLI_Snprintf(javadll, sizeof(javadll), "%s\\bin\\" JAVA_DLL, path);
+ 310         if (stat(javadll, &amp;s) == 0) {
+ 311             JLI_TraceLauncher("JRE path is %s\n", path);
+ 312             return JNI_TRUE;
+ 313         }
+ 314     }
+ 315 
+ 316 #ifdef USE_REGISTRY_LOOKUP
+ 317     /* Lookup public JRE using Windows registry. */
+ 318     if (GetPublicJREHome(path, pathsize)) {
+ 319         JLI_TraceLauncher("JRE path is %s\n", path);
+ 320         return JNI_TRUE;
+ 321     }
+ 322 #endif
+ 323 
+ 324     JLI_ReportErrorMessage(JRE_ERROR8 JAVA_DLL);
+ 325     return JNI_FALSE;
+ 326 }
+ 327 
+ 328 /*
+ 329  * Given a JRE location and a JVM type, construct what the name the
+ 330  * JVM shared library will be.  Return true, if such a library
+ 331  * exists, false otherwise.
+ 332  */
+ 333 static jboolean
+ 334 GetJVMPath(const char *jrepath, const char *jvmtype,
+ 335            char *jvmpath, jint jvmpathsize)
+ 336 {
+ 337     struct stat s;
+ 338     if (JLI_StrChr(jvmtype, '/') || JLI_StrChr(jvmtype, '\\')) {
+ 339         JLI_Snprintf(jvmpath, jvmpathsize, "%s\\" JVM_DLL, jvmtype);
+ 340     } else {
+ 341         JLI_Snprintf(jvmpath, jvmpathsize, "%s\\bin\\%s\\" JVM_DLL,
+ 342                      jrepath, jvmtype);
+ 343     }
+ 344     if (stat(jvmpath, &amp;s) == 0) {
+ 345         return JNI_TRUE;
+ 346     } else {
+ 347         return JNI_FALSE;
+ 348     }
+ 349 }
+ 350 
+ 351 /*
+ 352  * Load a jvm from "jvmpath" and initialize the invocation functions.
+ 353  */
+ 354 jboolean
+ 355 LoadJavaVM(const char *jvmpath, InvocationFunctions *ifn)
+ 356 {
+ 357     HINSTANCE handle;
+ 358 
+ 359     JLI_TraceLauncher("JVM path is %s\n", jvmpath);
+ 360 
+ 361     /*
+ 362      * The Microsoft C Runtime Library needs to be loaded first.  A copy is
+ 363      * assumed to be present in the "JRE path" directory.  If it is not found
+ 364      * there (or "JRE path" fails to resolve), skip the explicit load and let
+ 365      * nature take its course, which is likely to be a failure to execute.
+ 366      *
+ 367      */
+ 368     LoadMSVCRT();
+ 369 
+ 370     /* Load the Java VM DLL */
+ 371     if ((handle = LoadLibrary(jvmpath)) == 0) {
+ 372         JLI_ReportErrorMessage(DLL_ERROR4, (char *)jvmpath);
+ 373         return JNI_FALSE;
+ 374     }
+ 375 
+ 376     /* Now get the function addresses */
+ 377     ifn-&gt;CreateJavaVM =
+ 378         (void *)GetProcAddress(handle, "JNI_CreateJavaVM");
+ 379     ifn-&gt;GetDefaultJavaVMInitArgs =
+ 380         (void *)GetProcAddress(handle, "JNI_GetDefaultJavaVMInitArgs");
+ 381     if (ifn-&gt;CreateJavaVM == 0 || ifn-&gt;GetDefaultJavaVMInitArgs == 0) {
+ 382         JLI_ReportErrorMessage(JNI_ERROR1, (char *)jvmpath);
+ 383         return JNI_FALSE;
+ 384     }
+ 385 
+ 386     return JNI_TRUE;
+ 387 }
+ 388 
+ 389 /*
+ 390  * Removes the trailing file name and one sub-folder from a path.
+ 391  * If buf is "c:\foo\bin\javac", then put "c:\foo" into buf.
+ 392  */
+ 393 jboolean
+ 394 TruncatePath(char *buf)
+ 395 {
+ 396     char *cp;
+ 397     *JLI_StrRChr(buf, '\\') = '\0'; /* remove .exe file name */
+ 398     if ((cp = JLI_StrRChr(buf, '\\')) == 0) {
+ 399         /* This happens if the application is in a drive root, and
+ 400          * there is no bin directory. */
+ 401         buf[0] = '\0';
+ 402         return JNI_FALSE;
+ 403     }
+ 404     *cp = '\0'; /* remove the bin\ part */
+ 405     return JNI_TRUE;
+ 406 }
+ 407 
+ 408 /*
+ 409  * Retrieves the path to the JRE home by locating the executable file
+ 410  * of the current process and then truncating the path to the executable
+ 411  */
+ 412 jboolean
+ 413 GetApplicationHome(char *buf, jint bufsize)
+ 414 {
+ 415     GetModuleFileName(NULL, buf, bufsize);
+ 416     return TruncatePath(buf);
+ 417 }
+ 418 
+ 419 /*
+ 420  * Retrieves the path to the JRE home by locating JLI.DLL and
+ 421  * then truncating the path to JLI.DLL
+ 422  */
+ 423 jboolean
+ 424 GetApplicationHomeFromDll(char *buf, jint bufsize)
+ 425 {
+ 426     HMODULE module;
+ 427     DWORD flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+ 428                   GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+ 429 
+ 430     if (GetModuleHandleEx(flags, (LPCSTR)&amp;GetJREPath, &amp;module) != 0) {
+ 431         if (GetModuleFileName(module, buf, bufsize) != 0) {
+ 432             return TruncatePath(buf);
+ 433         }
+ 434     }
+ 435     return JNI_FALSE;
+ 436 }
+ 437 
+ 438 /*
+ 439  * Support for doing cheap, accurate interval timing.
+ 440  */
+ 441 static jboolean counterAvailable = JNI_FALSE;
+ 442 static jboolean counterInitialized = JNI_FALSE;
+ 443 static LARGE_INTEGER counterFrequency;
+ 444 
+ 445 jlong CounterGet()
+ 446 {
+ 447     LARGE_INTEGER count;
+ 448 
+ 449     if (!counterInitialized) {
+ 450         counterAvailable = QueryPerformanceFrequency(&amp;counterFrequency);
+ 451         counterInitialized = JNI_TRUE;
+ 452     }
+ 453     if (!counterAvailable) {
+ 454         return 0;
+ 455     }
+ 456     QueryPerformanceCounter(&amp;count);
+ 457     return (jlong)(count.QuadPart);
+ 458 }
+ 459 
+ 460 jlong Counter2Micros(jlong counts)
+ 461 {
+ 462     if (!counterAvailable || !counterInitialized) {
+ 463         return 0;
+ 464     }
+ 465     return (counts * 1000 * 1000)/counterFrequency.QuadPart;
+ 466 }
+ 467 /*
+ 468  * windows snprintf does not guarantee a null terminator in the buffer,
+ 469  * if the computed size is equal to or greater than the buffer size,
+ 470  * as well as error conditions. This function guarantees a null terminator
+ 471  * under all these conditions. An unreasonable buffer or size will return
+ 472  * an error value. Under all other conditions this function will return the
+ 473  * size of the bytes actually written minus the null terminator, similar
+ 474  * to ansi snprintf api. Thus when calling this function the caller must
+ 475  * ensure storage for the null terminator.
+ 476  */
+ 477 int
+ 478 JLI_Snprintf(char* buffer, size_t size, const char* format, ...) {
+ 479     int rc;
+ 480     va_list vl;
+ 481     if (size == 0 || buffer == NULL)
+ 482         return -1;
+ 483     buffer[0] = '\0';
+ 484     va_start(vl, format);
+ 485     rc = vsnprintf(buffer, size, format, vl);
+ 486     va_end(vl);
+ 487     /* force a null terminator, if something is amiss */
+ 488     if (rc &lt; 0) {
+ 489         /* apply ansi semantics */
+ 490         buffer[size - 1] = '\0';
+ 491         return (int)size;
+ 492     } else if (rc == size) {
+ 493         /* force a null terminator */
+ 494         buffer[size - 1] = '\0';
+ 495     }
+ 496     return rc;
+ 497 }
+ 498 
+ 499 /* taken from hotspot and slightly adjusted for jli lib;
+ 500  * creates a UNC/ELP path from input 'path'
+ 501  * the return buffer is allocated in C heap and needs to be freed using
+ 502  * JLI_MemFree by the caller.
+ 503  */
+ 504 static wchar_t* create_unc_path(const char* path, errno_t* err) {
+ 505     wchar_t* wpath = NULL;
+ 506     size_t converted_chars = 0;
+ 507     size_t path_len = strlen(path) + 1; /* includes the terminating NULL */
+ 508     if (path[0] == '\\' &amp;&amp; path[1] == '\\') {
+ 509         if (path[2] == '?' &amp;&amp; path[3] == '\\') {
+ 510             /* if it already has a \\?\ don't do the prefix */
+ 511             wpath = (wchar_t*) JLI_MemAlloc(path_len * sizeof(wchar_t));
+ 512             if (wpath != NULL) {
+ 513                 *err = mbstowcs_s(&amp;converted_chars, wpath, path_len, path, path_len);
+ 514             } else {
+ 515                 *err = ENOMEM;
+ 516             }
+ 517         } else {
+ 518             /* only UNC pathname includes double slashes here */
+ 519             wpath = (wchar_t*) JLI_MemAlloc((path_len + 7) * sizeof(wchar_t));
+ 520             if (wpath != NULL) {
+ 521                 wcscpy(wpath, L"\\\\?\\UNC\0");
+ 522                 *err = mbstowcs_s(&amp;converted_chars, &amp;wpath[7], path_len, path, path_len);
+ 523             } else {
+ 524                 *err = ENOMEM;
+ 525             }
+ 526         }
+ 527     } else {
+ 528         wpath = (wchar_t*) JLI_MemAlloc((path_len + 4) * sizeof(wchar_t));
+ 529         if (wpath != NULL) {
+ 530             wcscpy(wpath, L"\\\\?\\\0");
+ 531             *err = mbstowcs_s(&amp;converted_chars, &amp;wpath[4], path_len, path, path_len);
+ 532         } else {
+ 533             *err = ENOMEM;
+ 534         }
+ 535     }
+ 536     return wpath;
+ 537 }
+ 538 
+ 539 int JLI_Open(const char* name, int flags) {
+ 540     int fd;
+ 541     if (strlen(name) &lt; MAX_PATH) {
+ 542         fd = _open(name, flags);
+ 543     } else {
+ 544         errno_t err = ERROR_SUCCESS;
+ 545         wchar_t* wpath = create_unc_path(name, &amp;err);
+ 546         if (err != ERROR_SUCCESS) {
+ 547             if (wpath != NULL) JLI_MemFree(wpath);
+ 548             errno = err;
+ 549             return -1;
+ 550         }
+ 551         fd = _wopen(wpath, flags);
+ 552         if (fd == -1) {
+ 553             errno = GetLastError();
+ 554         }
+ 555         JLI_MemFree(wpath);
+ 556     }
+ 557     return fd;
+ 558 }
+ 559 
+ 560 JNIEXPORT void JNICALL
+ 561 JLI_ReportErrorMessage(const char* fmt, ...) {
+ 562     va_list vl;
+ 563     va_start(vl,fmt);
+ 564 
+ 565     if (IsJavaw()) {
+ 566         char *message;
+ 567 
+ 568         /* get the length of the string we need */
+ 569         int n = _vscprintf(fmt, vl);
+ 570 
+ 571         message = (char *)JLI_MemAlloc(n + 1);
+ 572         _vsnprintf(message, n, fmt, vl);
+ 573         message[n]='\0';
+ 574         MessageBox(NULL, message, "Java Virtual Machine Launcher",
+ 575             (MB_OK|MB_ICONSTOP|MB_APPLMODAL));
+ 576         JLI_MemFree(message);
+ 577     } else {
+ 578         vfprintf(stderr, fmt, vl);
+ 579         fprintf(stderr, "\n");
+ 580     }
+ 581     va_end(vl);
+ 582 }
+ 583 
+ 584 /*
+ 585  * Just like JLI_ReportErrorMessage, except that it concatenates the system
+ 586  * error message if any, its upto the calling routine to correctly
+ 587  * format the separation of the messages.
+ 588  */
+ 589 JNIEXPORT void JNICALL
+ 590 JLI_ReportErrorMessageSys(const char *fmt, ...)
+ 591 {
+ 592     va_list vl;
+ 593 
+ 594     int save_errno = errno;
+ 595     DWORD       errval;
+ 596     jboolean freeit = JNI_FALSE;
+ 597     char  *errtext = NULL;
+ 598 
+ 599     va_start(vl, fmt);
+ 600 
+ 601     if ((errval = GetLastError()) != 0) {               /* Platform SDK / DOS Error */
+ 602         int n = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|
+ 603             FORMAT_MESSAGE_IGNORE_INSERTS|FORMAT_MESSAGE_ALLOCATE_BUFFER,
+ 604             NULL, errval, 0, (LPTSTR)&amp;errtext, 0, NULL);
+ 605         if (errtext == NULL || n == 0) {                /* Paranoia check */
+ 606             errtext = "";
+ 607             n = 0;
+ 608         } else {
+ 609             freeit = JNI_TRUE;
+ 610             if (n &gt; 2) {                                /* Drop final CR, LF */
+ 611                 if (errtext[n - 1] == '\n') n--;
+ 612                 if (errtext[n - 1] == '\r') n--;
+ 613                 errtext[n] = '\0';
+ 614             }
+ 615         }
+ 616     } else {   /* C runtime error that has no corresponding DOS error code */
+ 617         errtext = strerror(save_errno);
+ 618     }
+ 619 
+ 620     if (IsJavaw()) {
+ 621         char *message;
+ 622         int mlen;
+ 623         /* get the length of the string we need */
+ 624         int len = mlen =  _vscprintf(fmt, vl) + 1;
+ 625         if (freeit) {
+ 626            mlen += (int)JLI_StrLen(errtext);
+ 627         }
+ 628 
+ 629         message = (char *)JLI_MemAlloc(mlen);
+ 630         _vsnprintf(message, len, fmt, vl);
+ 631         message[len]='\0';
+ 632 
+ 633         if (freeit) {
+ 634            JLI_StrCat(message, errtext);
+ 635         }
+ 636 
+ 637         MessageBox(NULL, message, "Java Virtual Machine Launcher",
+ 638             (MB_OK|MB_ICONSTOP|MB_APPLMODAL));
+ 639 
+ 640         JLI_MemFree(message);
+ 641     } else {
+ 642         vfprintf(stderr, fmt, vl);
+ 643         if (freeit) {
+ 644            fprintf(stderr, "%s", errtext);
+ 645         }
+ 646     }
+ 647     if (freeit) {
+ 648         (void)LocalFree((HLOCAL)errtext);
+ 649     }
+ 650     va_end(vl);
+ 651 }
+ 652 
+ 653 JNIEXPORT void JNICALL
+ 654 JLI_ReportExceptionDescription(JNIEnv * env) {
+ 655     if (IsJavaw()) {
+ 656        /*
+ 657         * This code should be replaced by code which opens a window with
+ 658         * the exception detail message, for now atleast put a dialog up.
+ 659         */
+ 660         MessageBox(NULL, "A Java Exception has occurred.", "Java Virtual Machine Launcher",
+ 661                (MB_OK|MB_ICONSTOP|MB_APPLMODAL));
+ 662     } else {
+ 663         (*env)-&gt;ExceptionDescribe(env);
+ 664     }
+ 665 }
+ 666 
+ 667 /*
+ 668  * Wrapper for platform dependent unsetenv function.
+ 669  */
+ 670 int
+ 671 UnsetEnv(char *name)
+ 672 {
+ 673     int ret;
+ 674     char *buf = JLI_MemAlloc(JLI_StrLen(name) + 2);
+ 675     buf = JLI_StrCat(JLI_StrCpy(buf, name), "=");
+ 676     ret = _putenv(buf);
+ 677     JLI_MemFree(buf);
+ 678     return (ret);
+ 679 }
+ 680 
+ 681 /* --- Splash Screen shared library support --- */
+ 682 
+ 683 static const char* SPLASHSCREEN_SO = "\\bin\\splashscreen.dll";
+ 684 
+ 685 static HMODULE hSplashLib = NULL;
+ 686 
+ 687 void* SplashProcAddress(const char* name) {
+ 688     char libraryPath[MAXPATHLEN]; /* some extra space for JLI_StrCat'ing SPLASHSCREEN_SO */
+ 689 
+ 690     if (!GetJREPath(libraryPath, MAXPATHLEN)) {
+ 691         return NULL;
+ 692     }
+ 693     if (JLI_StrLen(libraryPath)+JLI_StrLen(SPLASHSCREEN_SO) &gt;= MAXPATHLEN) {
+ 694         return NULL;
+ 695     }
+ 696     JLI_StrCat(libraryPath, SPLASHSCREEN_SO);
+ 697 
+ 698     if (!hSplashLib) {
+ 699         hSplashLib = LoadLibrary(libraryPath);
+ 700     }
+ 701     if (hSplashLib) {
+ 702         return GetProcAddress(hSplashLib, name);
+ 703     } else {
+ 704         return NULL;
+ 705     }
+ 706 }
+ 707 
+ 708 void SplashFreeLibrary() {
+ 709     if (hSplashLib) {
+ 710         FreeLibrary(hSplashLib);
+ 711         hSplashLib = NULL;
+ 712     }
+ 713 }
+ 714 
+ 715 /*
+ 716  * Signature adapter for _beginthreadex().
+ 717  */
+ 718 static unsigned __stdcall ThreadJavaMain(void* args) {
+ 719     return (unsigned)JavaMain(args);
+ 720 }
+ 721 
+ 722 /*
+ 723  * Block current thread and continue execution in a new thread.
+ 724  */
+ 725 int
+ 726 CallJavaMainInNewThread(jlong stack_size, void* args) {
+ 727     int rslt = 0;
+ 728     unsigned thread_id;
+ 729 
+ 730 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
+ 731 #define STACK_SIZE_PARAM_IS_A_RESERVATION  (0x10000)
+ 732 #endif
+ 733 
+ 734     /*
+ 735      * STACK_SIZE_PARAM_IS_A_RESERVATION is what we want, but it's not
+ 736      * supported on older version of Windows. Try first with the flag; and
+ 737      * if that fails try again without the flag. See MSDN document or HotSpot
+ 738      * source (os_win32.cpp) for details.
+ 739      */
+ 740     HANDLE thread_handle =
+ 741         (HANDLE)_beginthreadex(NULL,
+ 742                                (unsigned)stack_size,
+ 743                                ThreadJavaMain,
+ 744                                args,
+ 745                                STACK_SIZE_PARAM_IS_A_RESERVATION,
+ 746                                &amp;thread_id);
+ 747     if (thread_handle == NULL) {
+ 748         thread_handle =
+ 749         (HANDLE)_beginthreadex(NULL,
+ 750                                (unsigned)stack_size,
+ 751                                ThreadJavaMain,
+ 752                                args,
+ 753                                0,
+ 754                                &amp;thread_id);
+ 755     }
+ 756 
+ 757     /* AWT preloading (AFTER main thread start) */
+ 758 #ifdef ENABLE_AWT_PRELOAD
+ 759     /* D3D preloading */
+ 760     if (awtPreloadD3D != 0) {
+ 761         char *envValue;
+ 762         /* D3D routines checks env.var J2D_D3D if no appropriate
+ 763          * command line params was specified
+ 764          */
+ 765         envValue = getenv("J2D_D3D");
+ 766         if (envValue != NULL &amp;&amp; JLI_StrCaseCmp(envValue, "false") == 0) {
+ 767             awtPreloadD3D = 0;
+ 768         }
+ 769         /* Test that AWT preloading isn't disabled by J2D_D3D_PRELOAD env.var */
+ 770         envValue = getenv("J2D_D3D_PRELOAD");
+ 771         if (envValue != NULL &amp;&amp; JLI_StrCaseCmp(envValue, "false") == 0) {
+ 772             awtPreloadD3D = 0;
+ 773         }
+ 774         if (awtPreloadD3D &lt; 0) {
+ 775             /* If awtPreloadD3D is still undefined (-1), test
+ 776              * if it is turned on by J2D_D3D_PRELOAD env.var.
+ 777              * By default it's turned OFF.
+ 778              */
+ 779             awtPreloadD3D = 0;
+ 780             if (envValue != NULL &amp;&amp; JLI_StrCaseCmp(envValue, "true") == 0) {
+ 781                 awtPreloadD3D = 1;
+ 782             }
+ 783          }
+ 784     }
+ 785     if (awtPreloadD3D) {
+ 786         AWTPreload(D3D_PRELOAD_FUNC);
+ 787     }
+ 788 #endif /* ENABLE_AWT_PRELOAD */
+ 789 
+ 790     if (thread_handle) {
+ 791         WaitForSingleObject(thread_handle, INFINITE);
+ 792         GetExitCodeThread(thread_handle, &amp;rslt);
+ 793         CloseHandle(thread_handle);
+ 794     } else {
+ 795         rslt = JavaMain(args);
+ 796     }
+ 797 
+ 798 #ifdef ENABLE_AWT_PRELOAD
+ 799     if (awtPreloaded) {
+ 800         AWTPreloadStop();
+ 801     }
+ 802 #endif /* ENABLE_AWT_PRELOAD */
+ 803 
+ 804     return rslt;
+ 805 }
+ 806 
+ 807 /*
+ 808  * The implementation for finding classes from the bootstrap
+ 809  * class loader, refer to java.h
+ 810  */
+ 811 static FindClassFromBootLoader_t *findBootClass = NULL;
+ 812 
+ 813 jclass FindBootStrapClass(JNIEnv *env, const char *classname)
+ 814 {
+ 815    HMODULE hJvm;
+ 816 
+ 817    if (findBootClass == NULL) {
+ 818        hJvm = GetModuleHandle(JVM_DLL);
+ 819        if (hJvm == NULL) return NULL;
+ 820        /* need to use the demangled entry point */
+ 821        findBootClass = (FindClassFromBootLoader_t *)GetProcAddress(hJvm,
+ 822             "JVM_FindClassFromBootLoader");
+ 823        if (findBootClass == NULL) {
+ 824           JLI_ReportErrorMessage(DLL_ERROR4, "JVM_FindClassFromBootLoader");
+ 825           return NULL;
+ 826        }
+ 827    }
+ 828    return findBootClass(env, classname);
+ 829 }
+ 830 
+ 831 void
+ 832 InitLauncher(boolean javaw)
+ 833 {
+ 834     INITCOMMONCONTROLSEX icx;
+ 835 
+ 836     /*
+ 837      * Required for javaw mode MessageBox output as well as for
+ 838      * HotSpot -XX:+ShowMessageBoxOnError in java mode, an empty
+ 839      * flag field is sufficient to perform the basic UI initialization.
+ 840      */
+ 841     memset(&amp;icx, 0, sizeof(INITCOMMONCONTROLSEX));
+ 842     icx.dwSize = sizeof(INITCOMMONCONTROLSEX);
+ 843     InitCommonControlsEx(&amp;icx);
+ 844     _isjavaw = javaw;
+ 845     JLI_SetTraceLauncher();
+ 846 }
+ 847 
+ 848 
+ 849 /* ============================== */
+ 850 /* AWT preloading */
+ 851 #ifdef ENABLE_AWT_PRELOAD
+ 852 
+ 853 typedef int FnPreloadStart(void);
+ 854 typedef void FnPreloadStop(void);
+ 855 static FnPreloadStop *fnPreloadStop = NULL;
+ 856 static HMODULE hPreloadAwt = NULL;
+ 857 
+ 858 /*
+ 859  * Starts AWT preloading
+ 860  */
+ 861 int AWTPreload(const char *funcName)
+ 862 {
+ 863     int result = -1;
+ 864     /* load AWT library once (if several preload function should be called) */
+ 865     if (hPreloadAwt == NULL) {
+ 866         /* awt.dll is not loaded yet */
+ 867         char libraryPath[MAXPATHLEN];
+ 868         size_t jrePathLen = 0;
+ 869         HMODULE hJava = NULL;
+ 870         HMODULE hVerify = NULL;
+ 871 
+ 872         while (1) {
+ 873             /* awt.dll depends on jvm.dll &amp; java.dll;
+ 874              * jvm.dll is already loaded, so we need only java.dll;
+ 875              * java.dll depends on MSVCRT lib &amp; verify.dll.
+ 876              */
+ 877             if (!GetJREPath(libraryPath, MAXPATHLEN)) {
+ 878                 break;
+ 879             }
+ 880 
+ 881             /* save path length */
+ 882             jrePathLen = JLI_StrLen(libraryPath);
+ 883 
+ 884             if (jrePathLen + JLI_StrLen("\\bin\\verify.dll") &gt;= MAXPATHLEN) {
+ 885               /* jre path is too long, the library path will not fit there;
+ 886                * report and abort preloading
+ 887                */
+ 888               JLI_ReportErrorMessage(JRE_ERROR11);
+ 889               break;
+ 890             }
+ 891 
+ 892             /* load msvcrt 1st */
+ 893             LoadMSVCRT();
+ 894 
+ 895             /* load verify.dll */
+ 896             JLI_StrCat(libraryPath, "\\bin\\verify.dll");
+ 897             hVerify = LoadLibrary(libraryPath);
+ 898             if (hVerify == NULL) {
+ 899                 break;
+ 900             }
+ 901 
+ 902             /* restore jrePath */
+ 903             libraryPath[jrePathLen] = 0;
+ 904             /* load java.dll */
+ 905             JLI_StrCat(libraryPath, "\\bin\\" JAVA_DLL);
+ 906             hJava = LoadLibrary(libraryPath);
+ 907             if (hJava == NULL) {
+ 908                 break;
+ 909             }
+ 910 
+ 911             /* restore jrePath */
+ 912             libraryPath[jrePathLen] = 0;
+ 913             /* load awt.dll */
+ 914             JLI_StrCat(libraryPath, "\\bin\\awt.dll");
+ 915             hPreloadAwt = LoadLibrary(libraryPath);
+ 916             if (hPreloadAwt == NULL) {
+ 917                 break;
+ 918             }
+ 919 
+ 920             /* get "preloadStop" func ptr */
+ 921             fnPreloadStop = (FnPreloadStop *)GetProcAddress(hPreloadAwt, "preloadStop");
+ 922 
+ 923             break;
+ 924         }
+ 925     }
+ 926 
+ 927     if (hPreloadAwt != NULL) {
+ 928         FnPreloadStart *fnInit = (FnPreloadStart *)GetProcAddress(hPreloadAwt, funcName);
+ 929         if (fnInit != NULL) {
+ 930             /* don't forget to stop preloading */
+ 931             awtPreloaded = 1;
+ 932 
+ 933             result = fnInit();
+ 934         }
+ 935     }
+ 936 
+ 937     return result;
+ 938 }
+ 939 
+ 940 /*
+ 941  * Terminates AWT preloading
+ 942  */
+ 943 void AWTPreloadStop() {
+ 944     if (fnPreloadStop != NULL) {
+ 945         fnPreloadStop();
+ 946     }
+ 947 }
+ 948 
+ 949 #endif /* ENABLE_AWT_PRELOAD */
+ 950 
+ 951 int
+ 952 JVMInit(InvocationFunctions* ifn, jlong threadStackSize,
+ 953         int argc, char **argv,
+ 954         int mode, char *what, int ret)
+ 955 {
+ 956     ShowSplashScreen();
+ 957     return ContinueInNewThread(ifn, threadStackSize, argc, argv, mode, what, ret);
+ 958 }
+ 959 
+ 960 void
+ 961 PostJVMInit(JNIEnv *env, jclass mainClass, JavaVM *vm)
+ 962 {
+ 963     // stubbed out for windows and *nixes.
+ 964 }
+ 965 
+ 966 void
+ 967 RegisterThread()
+ 968 {
+ 969     // stubbed out for windows and *nixes.
+ 970 }
+ 971 
+ 972 /*
+ 973  * on windows, we return a false to indicate this option is not applicable
+ 974  */
+ 975 jboolean
+ 976 ProcessPlatformOption(const char *arg)
+ 977 {
+ 978     return JNI_FALSE;
+ 979 }
+ 980 
+ 981 /*
+ 982  * At this point we have the arguments to the application, and we need to
+ 983  * check with original stdargs in order to compare which of these truly
+ 984  * needs expansion. cmdtoargs will specify this if it finds a bare
+ 985  * (unquoted) argument containing a glob character(s) ie. * or ?
+ 986  */
+ 987 jobjectArray
+ 988 CreateApplicationArgs(JNIEnv *env, char **strv, int argc)
+ 989 {
+ 990     int i, j, idx;
+ 991     size_t tlen;
+ 992     jobjectArray outArray, inArray;
+ 993     char *arg, **nargv;
+ 994     jboolean needs_expansion = JNI_FALSE;
+ 995     jmethodID mid;
+ 996     int stdargc;
+ 997     StdArg *stdargs;
+ 998     int *appArgIdx;
+ 999     int isTool;
+1000     jclass cls = GetLauncherHelperClass(env);
+1001     NULL_CHECK0(cls);
+1002 
+1003     if (argc == 0) {
+1004         return NewPlatformStringArray(env, strv, argc);
+1005     }
+1006     // the holy grail we need to compare with.
+1007     stdargs = JLI_GetStdArgs();
+1008     stdargc = JLI_GetStdArgc();
+1009 
+1010     // sanity check, this should never happen
+1011     if (argc &gt; stdargc) {
+1012         JLI_TraceLauncher("Warning: app args is larger than the original, %d %d\n", argc, stdargc);
+1013         JLI_TraceLauncher("passing arguments as-is.\n");
+1014         return NewPlatformStringArray(env, strv, argc);
+1015     }
+1016 
+1017     // sanity check, match the args we have, to the holy grail
+1018     idx = JLI_GetAppArgIndex();
+1019 
+1020     // First arg index is NOT_FOUND
+1021     if (idx &lt; 0) {
+1022         // The only allowed value should be NOT_FOUND (-1) unless another change introduces 
+1023         // a different negative index
+1024         assert (idx == -1);
+1025         JLI_TraceLauncher("Warning: first app arg index not found, %d\n", idx);
+1026         JLI_TraceLauncher("passing arguments as-is.\n");
+1027         return NewPlatformStringArray(env, strv, argc);
+1028     }
+1029 
+1030     isTool = (idx == 0);
+1031     if (isTool) { idx++; } // skip tool name
+1032     JLI_TraceLauncher("AppArgIndex: %d points to %s\n", idx, stdargs[idx].arg);
+1033 
+1034     appArgIdx = calloc(argc, sizeof(int));
+1035     for (i = idx, j = 0; i &lt; stdargc; i++) {
+1036         if (isTool) { // filter -J used by tools to pass JVM options
+1037             arg = stdargs[i].arg;
+1038             if (arg[0] == '-' &amp;&amp; arg[1] == 'J') {
+1039                 continue;
+1040             }
+1041         }
+1042         appArgIdx[j++] = i;
+1043     }
+1044     // sanity check, ensure same number of arguments for application
+1045     if (j != argc) {
+1046         JLI_TraceLauncher("Warning: app args count doesn't match, %d %d\n", j, argc);
+1047         JLI_TraceLauncher("passing arguments as-is.\n");
+1048         JLI_MemFree(appArgIdx);
+1049         return NewPlatformStringArray(env, strv, argc);
+1050     }
+1051 
+1052     // make a copy of the args which will be expanded in java if required.
+1053     nargv = (char **)JLI_MemAlloc(argc * sizeof(char*));
+1054     for (i = 0; i &lt; argc; i++) {
+1055         jboolean arg_expand;
+1056         j = appArgIdx[i];
+1057         arg_expand = (JLI_StrCmp(stdargs[j].arg, strv[i]) == 0)
+1058             ? stdargs[j].has_wildcard
+1059             : JNI_FALSE;
+1060         if (needs_expansion == JNI_FALSE)
+1061             needs_expansion = arg_expand;
+1062 
+1063         // indicator char + String + NULL terminator, the java method will strip
+1064         // out the first character, the indicator character, so no matter what
+1065         // we add the indicator
+1066         tlen = 1 + JLI_StrLen(strv[i]) + 1;
+1067         nargv[i] = (char *) JLI_MemAlloc(tlen);
+1068         if (JLI_Snprintf(nargv[i], tlen, "%c%s", arg_expand ? 'T' : 'F',
+1069                          strv[i]) &lt; 0) {
+1070             return NULL;
+1071         }
+1072         JLI_TraceLauncher("%s\n", nargv[i]);
+1073     }
+1074 
+1075     if (!needs_expansion) {
+1076         // clean up any allocated memory and return back the old arguments
+1077         for (i = 0 ; i &lt; argc ; i++) {
+1078             JLI_MemFree(nargv[i]);
+1079         }
+1080         JLI_MemFree(nargv);
+1081         JLI_MemFree(appArgIdx);
+1082         return NewPlatformStringArray(env, strv, argc);
+1083     }
+1084     NULL_CHECK0(mid = (*env)-&gt;GetStaticMethodID(env, cls,
+1085                                                 "expandArgs",
+1086                                                 "([Ljava/lang/String;)[Ljava/lang/String;"));
+1087 
+1088     // expand the arguments that require expansion, the java method will strip
+1089     // out the indicator character.
+1090     NULL_CHECK0(inArray = NewPlatformStringArray(env, nargv, argc));
+1091     outArray = (*env)-&gt;CallStaticObjectMethod(env, cls, mid, inArray);
+1092     for (i = 0; i &lt; argc; i++) {
+1093         JLI_MemFree(nargv[i]);
+1094     }
+1095     JLI_MemFree(nargv);
+1096     JLI_MemFree(appArgIdx);
+1097     return outArray;
+1098 }
+</pre></body></html>

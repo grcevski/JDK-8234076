@@ -1,0 +1,933 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+    <script type="text/javascript" src="../../../../ancnav.js"></script>
+    </head>
+    <body id="SUNWwebrev" onkeypress="keypress(event);">
+    <a name="0"></a>
+    <pre></pre><hr></hr>
+<pre>
+   1 /*
+   2  * Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 /**
+  25  * @test
+  26  * @bug 5030233 6214916 6356475 6571029 6684582 6742159 4459600 6758881 6753938
+  27  *      6894719 6968053 7151434 7146424 8007333 8077822 8143640 8132379 8218547
+<a name="1" id="anc1"></a><span class="new">  28  *      8234076</span>
+  29  * @summary Argument parsing validation.
+  30  * @modules jdk.compiler
+  31  *          jdk.zipfs
+  32  * @compile -XDignore.symbol.file Arrrghs.java
+  33  * @run main/othervm Arrrghs
+  34  */
+  35 
+  36 
+  37 import java.io.File;
+  38 import java.io.FileNotFoundException;
+  39 import java.io.IOException;
+  40 import java.nio.file.Files;
+  41 import java.nio.file.Paths;
+  42 import java.nio.file.Path;
+  43 import java.util.ArrayList;
+  44 import java.util.Arrays;
+  45 import java.util.HashMap;
+  46 import java.util.List;
+  47 import java.util.Map;
+  48 import java.util.regex.Matcher;
+  49 import java.util.regex.Pattern;
+  50 
+  51 public class Arrrghs extends TestHelper {
+  52     private Arrrghs(){}
+  53     /**
+  54      * This class provides various tests for arguments processing.
+  55      *
+  56      * History: these set of tests  were part of Arrrghs.sh. The MKS shell
+  57      * implementations were notoriously buggy. Implementing these tests purely
+  58      * in Java is not only portable but also robust.
+  59      *
+  60      */
+  61 
+  62     // the pattern we hope to see in the output
+  63     static final Pattern ArgPattern = Pattern.compile("\\s*argv\\[[0-9]*\\].*=.*");
+  64 
+  65     void checkArgumentParsing(String inArgs, String... expArgs) throws IOException {
+  66         List&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();
+  67         scratchpad.add("set " + JLDEBUG_KEY + "=true");
+  68         // GAK, -version needs to be added so that windows can flush its stderr
+  69         // exiting the process prematurely can terminate the stderr.
+  70         scratchpad.add(javaCmd + " -version " + inArgs);
+  71         File batFile = new File("atest.bat");
+  72         createAFile(batFile, scratchpad);
+  73 
+  74         TestResult tr = doExec(batFile.getName());
+  75 
+  76         ArrayList&lt;String&gt; expList = new ArrayList&lt;&gt;();
+  77         expList.add(javaCmd);
+  78         expList.add("-version");
+  79         expList.addAll(Arrays.asList(expArgs));
+  80 
+  81         List&lt;String&gt; gotList = new ArrayList&lt;&gt;();
+  82         for (String x : tr.testOutput) {
+  83             Matcher m = ArgPattern.matcher(x);
+  84             if (m.matches()) {
+  85                 String a[] = x.split("=");
+  86                 gotList.add(a[a.length - 1].trim());
+  87             }
+  88         }
+  89         if (!gotList.equals(expList)) {
+  90             System.out.println(tr);
+  91             System.out.println("Expected args:");
+  92             System.out.println(expList);
+  93             System.out.println("Obtained args:");
+  94             System.out.println(gotList);
+  95             throw new RuntimeException("Error: args do not match");
+  96         }
+  97         System.out.println("\'" + inArgs + "\'" + " - Test passed");
+  98     }
+  99 
+ 100     /*
+ 101      * This tests general quoting and are specific to Windows, *nixes
+ 102      * need not worry about this, these have been tested with Windows
+ 103      * implementation and those that are known to work are used against
+ 104      * the java implementation. Note that the ProcessBuilder gets in the
+ 105      * way when testing some of these arguments, therefore we need to
+ 106      * create and execute a .bat file containing the arguments.
+ 107      */
+ 108     @Test
+ 109     void testArgumentParsing() throws IOException {
+ 110         if (!isWindows)
+ 111             return;
+ 112         // no quotes
+ 113         checkArgumentParsing("a b c d", "a", "b", "c", "d");
+ 114 
+ 115         // single quotes
+ 116         checkArgumentParsing("\"a b c d\"", "a b c d");
+ 117 
+ 118         //double quotes
+ 119         checkArgumentParsing("\"\"a b c d\"\"", "a", "b", "c", "d");
+ 120 
+ 121         // triple quotes
+ 122         checkArgumentParsing("\"\"\"a b c d\"\"\"", "\"a b c d\"");
+ 123 
+ 124         // a literal within single quotes
+ 125         checkArgumentParsing("\"a\"b c d\"e\"", "ab", "c", "de");
+ 126 
+ 127         // a literal within double quotes
+ 128         checkArgumentParsing("\"\"a\"b c d\"e\"\"", "ab c de");
+ 129 
+ 130         // a literal quote
+ 131         checkArgumentParsing("a\\\"b", "a\"b");
+ 132 
+ 133         // double back-slash
+ 134         checkArgumentParsing("\"a b c d\\\\\"", "a b c d\\");
+ 135 
+ 136         // triple back-slash
+ 137         checkArgumentParsing("a\\\\\\\"b", "a\\\"b");
+ 138 
+ 139         // dangling quote
+ 140         checkArgumentParsing("\"a b c\"\"", "a b c\"");
+ 141 
+ 142         // expansions of white space separators
+ 143         checkArgumentParsing("a b", "a", "b");
+ 144         checkArgumentParsing("a\tb", "a", "b");
+ 145         checkArgumentParsing("a \t b", "a", "b");
+ 146 
+ 147         checkArgumentParsing("\"C:\\TEST A\\\\\"", "C:\\TEST A\\");
+ 148         checkArgumentParsing("\"\"C:\\TEST A\\\\\"\"", "C:\\TEST", "A\\");
+ 149 
+ 150         // MS Windows tests
+ 151         // triple back-slash
+ 152         checkArgumentParsing("a\\\\\\d", "a\\\\\\d");
+ 153 
+ 154         // triple back-slash in quotes
+ 155         checkArgumentParsing("\"a\\\\\\d\"", "a\\\\\\d");
+ 156 
+ 157         // slashes separating characters
+ 158         checkArgumentParsing("X\\Y\\Z", "X\\Y\\Z");
+ 159         checkArgumentParsing("\\X\\Y\\Z", "\\X\\Y\\Z");
+ 160 
+ 161         // literals within dangling quotes, etc.
+ 162         checkArgumentParsing("\"a b c\" d e", "a b c", "d", "e");
+ 163         checkArgumentParsing("\"ab\\\"c\"  \"\\\\\"  d", "ab\"c", "\\", "d");
+ 164         checkArgumentParsing("a\\\\\\c d\"e f\"g h", "a\\\\\\c", "de fg", "h");
+ 165         checkArgumentParsing("a\\\\\\\"b c d", "a\\\"b", "c", "d");
+ 166         checkArgumentParsing("a\\\\\\\\\"g c\" d e", "a\\\\g c", "d", "e");
+ 167 
+ 168         // treatment of back-slashes
+ 169         checkArgumentParsing("*\\", "*\\");
+ 170         checkArgumentParsing("*/", "*/");
+ 171         checkArgumentParsing(".\\*", ".\\*");
+ 172         checkArgumentParsing("./*", "./*");
+ 173         checkArgumentParsing("..\\..\\*", "..\\..\\*");
+ 174         checkArgumentParsing("../../*", "../../*");
+ 175         checkArgumentParsing("..\\..\\", "..\\..\\");
+ 176         checkArgumentParsing("../../", "../../");
+ 177         checkArgumentParsing("a b\\ c", "a", "b\\", "c");
+ 178         // 2 back-slashes
+ 179         checkArgumentParsing("\\\\?", "\\\\?");
+ 180         // 3 back-slashes
+ 181         checkArgumentParsing("\\\\\\?", "\\\\\\?");
+ 182         // 4 back-slashes
+ 183         checkArgumentParsing("\\\\\\\\?", "\\\\\\\\?");
+ 184         // 5 back-slashes
+ 185         checkArgumentParsing("\\\\\\\\\\?", "\\\\\\\\\\?");
+ 186         // 6 back-slashes
+ 187         checkArgumentParsing("\\\\\\\\\\\\?", "\\\\\\\\\\\\?");
+ 188 
+ 189         // more treatment of  mixed slashes
+ 190         checkArgumentParsing("f1/ f3\\ f4/", "f1/", "f3\\", "f4/");
+ 191         checkArgumentParsing("f1/ f2\' ' f3/ f4/", "f1/", "f2\'", "'", "f3/", "f4/");
+ 192 
+ 193         checkArgumentParsing("a\\*\\b", "a\\*\\b");
+ 194     }
+ 195 
+ 196     private void initEmptyDir(File emptyDir) throws IOException {
+ 197         if (emptyDir.exists()) {
+ 198             recursiveDelete(emptyDir);
+ 199         }
+ 200         emptyDir.mkdir();
+ 201     }
+ 202 
+ 203     private void initDirWithJavaFiles(File libDir) throws IOException {
+ 204 
+ 205         if (libDir.exists()) {
+ 206             recursiveDelete(libDir);
+ 207         }
+ 208         libDir.mkdirs();
+ 209         ArrayList&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();
+ 210         scratchpad.add("package lib;");
+ 211         scratchpad.add("public class Fbo {");
+ 212         scratchpad.add("public static void main(String... args){Foo.f();}");
+ 213         scratchpad.add("public static void f(){}");
+ 214         scratchpad.add("}");
+ 215         createFile(new File(libDir, "Fbo.java"), scratchpad);
+ 216 
+ 217         scratchpad.clear();
+ 218         scratchpad.add("package lib;");
+ 219         scratchpad.add("public class Foo {");
+ 220         scratchpad.add("public static void main(String... args){");
+ 221         scratchpad.add("for (String x : args) {");
+ 222         scratchpad.add("System.out.println(x);");
+ 223         scratchpad.add("}");
+ 224         scratchpad.add("Fbo.f();");
+ 225         scratchpad.add("}");
+ 226         scratchpad.add("public static void f(){}");
+ 227         scratchpad.add("}");
+ 228         createFile(new File(libDir, "Foo.java"), scratchpad);
+ 229     }
+ 230 
+ 231     void checkArgumentWildcard(String inArgs, String... expArgs) throws IOException {
+ 232         String[] in = {inArgs};
+ 233         checkArgumentWildcard(in, expArgs);
+ 234 
+ 235         // now add arbitrary arguments before and after
+ 236         String[] outInArgs = { "-Q", inArgs, "-R"};
+ 237 
+ 238         String[] outExpArgs = new String[expArgs.length + 2];
+ 239         outExpArgs[0] = "-Q";
+ 240         System.arraycopy(expArgs, 0, outExpArgs, 1, expArgs.length);
+ 241         outExpArgs[expArgs.length + 1] = "-R";
+ 242         checkArgumentWildcard(outInArgs, outExpArgs);
+ 243     }
+ 244 
+ 245     void checkArgumentWildcard(String[] inArgs, String[] expArgs) throws IOException {
+ 246         ArrayList&lt;String&gt; argList = new ArrayList&lt;&gt;();
+ 247         argList.add(javaCmd);
+ 248         argList.add("-cp");
+ 249         argList.add("lib" + File.separator + "*");
+ 250         argList.add("lib.Foo");
+ 251         argList.addAll(Arrays.asList(inArgs));
+ 252         String[] cmds = new String[argList.size()];
+ 253         argList.toArray(cmds);
+ 254         TestResult tr = doExec(cmds);
+ 255         if (!tr.isOK()) {
+ 256             System.out.println(tr);
+ 257             throw new RuntimeException("Error: classpath single entry wildcard entry");
+ 258         }
+ 259 
+ 260         ArrayList&lt;String&gt; expList = new ArrayList&lt;&gt;();
+ 261         expList.addAll(Arrays.asList(expArgs));
+ 262 
+ 263         List&lt;String&gt; gotList = new ArrayList&lt;&gt;();
+ 264         for (String x : tr.testOutput) {
+ 265             gotList.add(x.trim());
+ 266         }
+ 267         if (!gotList.equals(expList)) {
+ 268             System.out.println(tr);
+ 269             System.out.println("Expected args:");
+ 270             System.out.println(expList);
+ 271             System.out.println("Obtained args:");
+ 272             System.out.println(gotList);
+ 273             throw new RuntimeException("Error: args do not match");
+ 274         }
+ 275         System.out.print("\'");
+ 276         for (String x : inArgs) {
+ 277             System.out.print(x + " ");
+ 278         }
+ 279         System.out.println("\'" + " - Test passed");
+ 280     }
+ 281 
+ 282     /*
+ 283      * These tests are not expected to work on *nixes, and are ignored.
+ 284      */
+ 285     @Test
+ 286     void testWildCardArgumentProcessing() throws IOException {
+ 287         if (!isWindows)
+ 288             return;
+ 289         File cwd = new File(".");
+ 290         File libDir = new File(cwd, "lib");
+ 291         initDirWithJavaFiles(libDir);
+ 292         initEmptyDir(new File(cwd, "empty"));
+ 293 
+ 294         // test if javac (the command) can compile *.java
+ 295         TestResult tr = doExec(javacCmd, libDir.getName() + File.separator + "*.java");
+ 296         if (!tr.isOK()) {
+ 297             System.out.println(tr);
+ 298             throw new RuntimeException("Error: compiling java wildcards");
+ 299         }
+ 300 
+ 301         // test if javac (the command) can compile *.java with a vmoption
+ 302         tr = doExec(javacCmd, "-cp", ".",
+ 303                     "-J-showversion", "-J-Dsomeproperty=foo",
+ 304                     libDir.getName() + File.separator + "*.java");
+ 305         if (!tr.isOK()) {
+ 306             System.out.println(tr);
+ 307             throw new RuntimeException("Error: compiling java wildcards with vmoptions");
+ 308         }
+ 309 
+ 310 
+ 311         // use the jar cmd to create jars using the ? wildcard
+ 312         File jarFoo = new File(libDir, "Foo.jar");
+ 313         tr = doExec(jarCmd, "cvf", jarFoo.getAbsolutePath(), "lib" + File.separator + "F?o.class");
+ 314         if (!tr.isOK()) {
+ 315             System.out.println(tr);
+ 316             throw new RuntimeException("Error: creating jar with wildcards");
+ 317         }
+ 318 
+ 319         // now the litmus test!, this should work
+ 320         checkArgumentWildcard("a", "a");
+ 321 
+ 322         // test for basic expansion
+ 323         checkArgumentWildcard("lib\\F*java", "lib\\Fbo.java", "lib\\Foo.java");
+ 324 
+ 325         // basic expansion in quotes
+ 326         checkArgumentWildcard("\"lib\\F*java\"", "lib\\F*java");
+ 327 
+ 328         checkArgumentWildcard("lib\\**", "lib\\Fbo.class", "lib\\Fbo.java",
+ 329                               "lib\\Foo.class", "lib\\Foo.jar", "lib\\Foo.java");
+ 330 
+ 331         checkArgumentWildcard("lib\\*?", "lib\\Fbo.class", "lib\\Fbo.java",
+ 332                               "lib\\Foo.class", "lib\\Foo.jar", "lib\\Foo.java");
+ 333 
+ 334         checkArgumentWildcard("lib\\?*", "lib\\Fbo.class", "lib\\Fbo.java",
+ 335                 "lib\\Foo.class", "lib\\Foo.jar", "lib\\Foo.java");
+ 336 
+ 337         checkArgumentWildcard("lib\\?", "lib\\?");
+ 338 
+ 339         // test for basic expansion
+ 340         checkArgumentWildcard("lib\\*java", "lib\\Fbo.java", "lib\\Foo.java");
+ 341 
+ 342         // basic expansion in quotes
+ 343         checkArgumentWildcard("\"lib\\*.java\"", "lib\\*.java");
+ 344 
+ 345         // suffix expansion
+ 346         checkArgumentWildcard("lib\\*.class", "lib\\Fbo.class", "lib\\Foo.class");
+ 347 
+ 348         // suffix expansion in quotes
+ 349         checkArgumentWildcard("\"lib\\*.class\"", "lib\\*.class");
+ 350 
+ 351         // check for ? expansion now
+ 352         checkArgumentWildcard("lib\\F?o.java", "lib\\Fbo.java", "lib\\Foo.java");
+ 353 
+ 354         // check ? in quotes
+ 355         checkArgumentWildcard("\"lib\\F?o.java\"", "lib\\F?o.java");
+ 356 
+ 357         // check ? as suffixes
+ 358         checkArgumentWildcard("lib\\F?o.????", "lib\\Fbo.java", "lib\\Foo.java");
+ 359 
+ 360         // check ? in a leading role
+ 361         checkArgumentWildcard("lib\\???.java", "lib\\Fbo.java", "lib\\Foo.java");
+ 362         checkArgumentWildcard("\"lib\\???.java\"", "lib\\???.java");
+ 363 
+ 364         // check ? prefixed with -
+ 365         checkArgumentWildcard("-?", "-?");
+ 366 
+ 367         // check * prefixed with -
+ 368         checkArgumentWildcard("-*", "-*");
+ 369 
+ 370         // check on empty directory
+ 371         checkArgumentWildcard("empty\\*", "empty\\*");
+ 372         checkArgumentWildcard("empty\\**", "empty\\**");
+ 373         checkArgumentWildcard("empty\\?", "empty\\?");
+ 374         checkArgumentWildcard("empty\\??", "empty\\??");
+ 375         checkArgumentWildcard("empty\\*?", "empty\\*?");
+ 376         checkArgumentWildcard("empty\\?*", "empty\\?*");
+ 377 
+ 378         // 8132379: java should not filter out -J options for application
+ 379         String[] args = { "-J-one", "-Jtwo", "lib\\???.java", "-J-Dsomething",
+ 380            "a", "-J-Dlast.arg" };
+ 381         String[] expected = { "-J-one", "-Jtwo", "lib\\Fbo.java",
+ 382            "lib\\Foo.java", "-J-Dsomething", "a", "-J-Dlast.arg" };
+ 383         checkArgumentWildcard(args, expected);
+ 384     }
+ 385 
+ 386     void doArgumentCheck(String inArgs, String... expArgs) {
+ 387         Map&lt;String, String&gt; env = new HashMap&lt;&gt;();
+ 388         env.put(JLDEBUG_KEY, "true");
+ 389         TestResult tr = doExec(env, javaCmd, inArgs);
+ 390         System.out.println(tr);
+ 391         int sindex = tr.testOutput.indexOf("Command line args:");
+ 392         if (sindex &lt; 0) {
+ 393             System.out.println(tr);
+ 394             throw new RuntimeException("Error: no output");
+ 395         }
+ 396         sindex++; // skip over the tag
+ 397         List&lt;String&gt; gotList = new ArrayList&lt;&gt;();
+ 398         for (String x : tr.testOutput.subList(sindex, sindex + expArgs.length)) {
+ 399             String a[] = x.split("=");
+ 400             gotList.add(a[a.length - 1].trim());
+ 401         }
+ 402         List&lt;String&gt; expList = Arrays.asList(expArgs);
+ 403         if (!gotList.equals(expList)) {
+ 404             System.out.println(tr);
+ 405             System.out.println("Expected args:");
+ 406             System.out.println(expList);
+ 407             System.out.println("Obtained args:");
+ 408             System.out.println(gotList);
+ 409             throw new RuntimeException("Error: args do not match");
+ 410         }
+ 411     }
+ 412 
+ 413 
+ 414     /*
+ 415      * These tests are usually run on non-existent targets to check error results
+ 416      */
+ 417     @Test
+ 418     void testBasicErrorMessages() {
+ 419         // Tests for 5030233
+ 420         TestResult tr = doExec(javaCmd, "-cp");
+ 421         tr.checkNegative();
+ 422         tr.isNotZeroOutput();
+ 423         if (!tr.testStatus)
+ 424             System.out.println(tr);
+ 425 
+ 426         tr = doExec(javaCmd, "-classpath");
+ 427         tr.checkNegative();
+ 428         tr.isNotZeroOutput();
+ 429         if (!tr.testStatus)
+ 430             System.out.println(tr);
+ 431 
+ 432         tr = doExec(javaCmd, "-jar");
+ 433         tr.checkNegative();
+ 434         tr.isNotZeroOutput();
+ 435         if (!tr.testStatus)
+ 436             System.out.println(tr);
+ 437 
+ 438         tr = doExec(javacCmd, "-cp");
+ 439         tr.checkNegative();
+ 440         tr.isNotZeroOutput();
+ 441         if (!tr.testStatus)
+ 442             System.out.println(tr);
+ 443 
+ 444         // Test for 6356475 "REGRESSION:"java -X" from cmdline fails"
+ 445         tr = doExec(javaCmd, "-X");
+ 446         tr.checkPositive();
+ 447         tr.isNotZeroOutput();
+ 448         if (!tr.testStatus)
+ 449             System.out.println(tr);
+ 450 
+ 451         tr = doExec(javaCmd, "-help");
+ 452         tr.checkPositive();
+ 453         tr.isNotZeroOutput();
+ 454         if (!tr.testStatus)
+ 455             System.out.println(tr);
+ 456 
+ 457         // 6753938, test for non-negative exit value for an incorrectly formed
+ 458         // command line,  '% java'
+ 459         tr = doExec(javaCmd);
+ 460         tr.checkNegative();
+ 461         tr.isNotZeroOutput();
+ 462         if (!tr.testStatus)
+ 463             System.out.println(tr);
+ 464 
+ 465         // 6753938, test for non-negative exit value for an incorrectly formed
+ 466         // command line,  '% java -Xcomp'
+ 467         tr = doExec(javaCmd, "-Xcomp");
+ 468         tr.checkNegative();
+ 469         tr.isNotZeroOutput();
+ 470         if (!tr.testStatus)
+ 471             System.out.println(tr);
+ 472 
+ 473         // 7151434, test for non-negative exit value for an incorrectly formed
+ 474         // command line, '% java -jar -W', note the bogus -W
+ 475         tr = doExec(javaCmd, "-jar", "-W");
+ 476         tr.checkNegative();
+ 477         tr.contains("Unrecognized option: -W");
+ 478         if (!tr.testStatus)
+ 479             System.out.println(tr);
+ 480     }
+ 481 
+ 482     /*
+ 483      * Tests -jar command on a jar file with "long" (&gt; 260 chars) full path on Windows
+ 484      */
+ 485     @Test
+ 486     void testLongPathJarFile() throws IOException {
+ 487         if (!isWindows) {
+ 488             return;
+ 489         }
+ 490         // put the jar file to a location with long path
+ 491         String longPathPart = "longpathtest_longpathtest/";
+ 492         String longPathStr = longPathPart.repeat(15);
+ 493         Path longPath = Paths.get(longPathStr);
+ 494         Path jarPath = Files.createDirectories(longPath).resolve("elp.jar");
+ 495         File elp = jarPath.toFile();
+ 496         createJar(elp, new File("Foo"), "public static void main(String[] args){ System.out.println(\"Hello from ELP\"); }");
+ 497         System.out.println("execute " + elp.getAbsolutePath());
+ 498         TestResult tr = doExec(javaCmd, "-jar", elp.getAbsolutePath());
+ 499         tr.checkPositive();
+ 500         tr.contains("Hello from ELP");
+ 501     }
+ 502 
+ 503     /*
+ 504      * Tests various dispositions of the main method, these tests are limited
+ 505      * to English locales as they check for error messages that are localized.
+ 506      */
+ 507     @Test
+ 508     void testMainMethod() throws FileNotFoundException {
+ 509         if (!isEnglishLocale()) {
+ 510             return;
+ 511         }
+ 512 
+ 513         TestResult tr;
+ 514 
+ 515         // a missing class
+ 516         createJar("MIA", new File("some.jar"), new File("Foo"),
+ 517                 (String[])null);
+ 518         tr = doExec(javaCmd, "-jar", "some.jar");
+ 519         tr.contains("Error: Could not find or load main class MIA");
+ 520         if (!tr.testStatus)
+ 521             System.out.println(tr);
+ 522         // use classpath to check
+ 523         tr = doExec(javaCmd, "-cp", "some.jar", "MIA");
+ 524         tr.contains("Error: Could not find or load main class MIA");
+ 525         if (!tr.testStatus)
+ 526             System.out.println(tr);
+ 527 
+ 528         // incorrect method access
+ 529         createJar(new File("some.jar"), new File("Foo"),
+ 530                 "private static void main(String[] args){}");
+ 531         tr = doExec(javaCmd, "-jar", "some.jar");
+ 532         tr.contains("Error: Main method not found in class Foo");
+ 533         if (!tr.testStatus)
+ 534             System.out.println(tr);
+ 535         // use classpath to check
+ 536         tr = doExec(javaCmd, "-cp", "some.jar", "Foo");
+ 537         tr.contains("Error: Main method not found in class Foo");
+ 538         if (!tr.testStatus)
+ 539             System.out.println(tr);
+ 540 
+ 541         // incorrect return type
+ 542         createJar(new File("some.jar"), new File("Foo"),
+ 543                 "public static int main(String[] args){return 1;}");
+ 544         tr = doExec(javaCmd, "-jar", "some.jar");
+ 545         tr.contains("Error: Main method must return a value of type void in class Foo");
+ 546         if (!tr.testStatus)
+ 547             System.out.println(tr);
+ 548         // use classpath to check
+ 549         tr = doExec(javaCmd, "-cp", "some.jar", "Foo");
+ 550         tr.contains("Error: Main method must return a value of type void in class Foo");
+ 551         if (!tr.testStatus)
+ 552             System.out.println(tr);
+ 553 
+ 554         // incorrect parameter type
+ 555         createJar(new File("some.jar"), new File("Foo"),
+ 556                 "public static void main(Object[] args){}");
+ 557         tr = doExec(javaCmd, "-jar", "some.jar");
+ 558         tr.contains("Error: Main method not found in class Foo");
+ 559         if (!tr.testStatus)
+ 560             System.out.println(tr);
+ 561         // use classpath to check
+ 562         tr = doExec(javaCmd, "-cp", "some.jar", "Foo");
+ 563         tr.contains("Error: Main method not found in class Foo");
+ 564         if (!tr.testStatus)
+ 565             System.out.println(tr);
+ 566 
+ 567         // incorrect method type - non-static
+ 568          createJar(new File("some.jar"), new File("Foo"),
+ 569                 "public void main(String[] args){}");
+ 570         tr = doExec(javaCmd, "-jar", "some.jar");
+ 571         tr.contains("Error: Main method is not static in class Foo");
+ 572         if (!tr.testStatus)
+ 573             System.out.println(tr);
+ 574         // use classpath to check
+ 575         tr = doExec(javaCmd, "-cp", "some.jar", "Foo");
+ 576         tr.contains("Error: Main method is not static in class Foo");
+ 577         if (!tr.testStatus)
+ 578             System.out.println(tr);
+ 579 
+ 580         // amongst a potpourri of kindred main methods, is the right one chosen ?
+ 581         createJar(new File("some.jar"), new File("Foo"),
+ 582             "void main(Object[] args){}",
+ 583             "int  main(Float[] args){return 1;}",
+ 584             "private void main() {}",
+ 585             "private static void main(int x) {}",
+ 586             "public int main(int argc, String[] argv) {return 1;}",
+ 587             "public static void main(String[] args) {System.out.println(\"THE_CHOSEN_ONE\");}");
+ 588         tr = doExec(javaCmd, "-jar", "some.jar");
+ 589         tr.contains("THE_CHOSEN_ONE");
+ 590         if (!tr.testStatus)
+ 591             System.out.println(tr);
+ 592         // use classpath to check
+ 593         tr = doExec(javaCmd, "-cp", "some.jar", "Foo");
+ 594         tr.contains("THE_CHOSEN_ONE");
+ 595         if (!tr.testStatus)
+ 596             System.out.println(tr);
+ 597 
+ 598         // test for extraneous whitespace in the Main-Class attribute
+ 599         createJar(" Foo ", new File("some.jar"), new File("Foo"),
+ 600                 "public static void main(String... args){}");
+ 601         tr = doExec(javaCmd, "-jar", "some.jar");
+ 602         tr.checkPositive();
+ 603         if (!tr.testStatus)
+ 604             System.out.println(tr);
+ 605     }
+ 606     /*
+ 607      * tests 6968053, ie. we turn on the -Xdiag (for now) flag and check if
+ 608      * the suppressed stack traces are exposed, ignore these tests for localized
+ 609      * locales, limiting to English only.
+ 610      */
+ 611     @Test
+ 612     void testDiagOptions() throws FileNotFoundException {
+ 613         if (!isEnglishLocale()) { // only english version
+ 614             return;
+ 615         }
+ 616         TestResult tr;
+ 617         // a missing class
+ 618         createJar("MIA", new File("some.jar"), new File("Foo"),
+ 619                 (String[])null);
+ 620         tr = doExec(javaCmd, "-Xdiag", "-jar", "some.jar");
+ 621         tr.contains("Error: Could not find or load main class MIA");
+ 622         tr.contains("java.lang.ClassNotFoundException: MIA");
+ 623         if (!tr.testStatus)
+ 624             System.out.println(tr);
+ 625 
+ 626         // use classpath to check
+ 627         tr = doExec(javaCmd,  "-Xdiag", "-cp", "some.jar", "MIA");
+ 628         tr.contains("Error: Could not find or load main class MIA");
+ 629         tr.contains("java.lang.ClassNotFoundException: MIA");
+ 630         if (!tr.testStatus)
+ 631             System.out.println(tr);
+ 632 
+ 633         // a missing class on the classpath
+ 634         tr = doExec(javaCmd, "-Xdiag", "NonExistentClass");
+ 635         tr.contains("Error: Could not find or load main class NonExistentClass");
+ 636         tr.contains("java.lang.ClassNotFoundException: NonExistentClass");
+ 637         if (!tr.testStatus)
+ 638             System.out.println(tr);
+<a name="2" id="anc2"></a><span class="new"> 639     }</span>
+<span class="new"> 640 </span>
+<span class="new"> 641     private void initModulesDir(File modulesDir) throws IOException {</span>
+<span class="new"> 642         if (modulesDir.exists()) {</span>
+<span class="new"> 643             recursiveDelete(modulesDir);</span>
+<span class="new"> 644         }</span>
+<span class="new"> 645 </span>
+<span class="new"> 646         modulesDir.mkdirs();</span>
+<span class="new"> 647         File srcDir = new File(modulesDir, "src");</span>
+<span class="new"> 648         File modsDir = new File(modulesDir, "mods");</span>
+<span class="new"> 649         File testDir = new File(srcDir, "test");</span>
+<span class="new"> 650         File launcherTestDir = new File(testDir, "launcher");</span>
+<span class="new"> 651         srcDir.mkdir();</span>
+<span class="new"> 652         modsDir.mkdir();</span>
+<span class="new"> 653         testDir.mkdir();</span>
+<span class="new"> 654         launcherTestDir.mkdir();</span>
+<span class="new"> 655 </span>
+<span class="new"> 656         ArrayList&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();</span>
+<span class="new"> 657         scratchpad.add("module test {}");</span>
+<span class="new"> 658         createFile(new File(testDir, "module-info.java"), scratchpad);</span>
+<span class="new"> 659 </span>
+<span class="new"> 660         scratchpad.clear();</span>
+<span class="new"> 661         scratchpad.add("package launcher;");</span>
+<span class="new"> 662         scratchpad.add("import java.util.Arrays;");</span>
+<span class="new"> 663         scratchpad.add("public class Main {");</span>
+<span class="new"> 664         scratchpad.add("public static void main(String[] args) {");</span>
+<span class="new"> 665         scratchpad.add("System.out.println(Arrays.toString(args));");</span>
+<span class="new"> 666         scratchpad.add("}");</span>
+<span class="new"> 667         scratchpad.add("}");</span>
+<span class="new"> 668         createFile(new File(launcherTestDir, "Main.java"), scratchpad);</span>
+<span class="new"> 669     }</span>
+<span class="new"> 670 </span>
+<span class="new"> 671     /*</span>
+<span class="new"> 672      * These tests are not expected to work on *nixes, and are ignored.</span>
+<span class="new"> 673      */</span>
+<span class="new"> 674     @Test</span>
+<span class="new"> 675     void testForNegativeArgumentIndex() throws IOException {</span>
+<span class="new"> 676         if (!isWindows)</span>
+<span class="new"> 677             return;</span>
+<span class="new"> 678         File cwd = new File(".");</span>
+<span class="new"> 679         File testModuleDir = new File(cwd, "modules_test");</span>
+<span class="new"> 680         initModulesDir(testModuleDir);</span>
+<span class="new"> 681 </span>
+<span class="new"> 682         Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");</span>
+<span class="new"> 683         Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");</span>
+<span class="new"> 684     </span>
+<span class="new"> 685         // test module / main class</span>
+<span class="new"> 686         String TEST_MODULE = "test";</span>
+<span class="new"> 687     </span>
+<span class="new"> 688         // javac -d mods/test src/test/**</span>
+<span class="new"> 689         TestResult tr = doExec(</span>
+<span class="new"> 690             javacCmd, </span>
+<span class="new"> 691             "-d", MODS_DIR.toString(), </span>
+<span class="new"> 692             "--module-source-path", SRC_DIR.toString(),</span>
+<span class="new"> 693             "--module", TEST_MODULE);</span>
+<span class="new"> 694 </span>
+<span class="new"> 695         if (!tr.isOK()) {</span>
+<span class="new"> 696             System.out.println("test did not compile");</span>
+<span class="new"> 697             throw new RuntimeException("Error: modules test did not compile");</span>
+<span class="new"> 698         }</span>
+<span class="new"> 699 </span>
+<span class="new"> 700         Map&lt;String, String&gt; env = new HashMap&lt;&gt;();</span>
+<span class="new"> 701         env.put(JLDEBUG_KEY, "true");</span>
+<span class="new"> 702 </span>
+<span class="new"> 703         // Run with unsupported module command line option</span>
+<span class="new"> 704         tr = doExec(</span>
+<span class="new"> 705             env, </span>
+<span class="new"> 706             javaCmd, </span>
+<span class="new"> 707             "--module-path=" + MODS_DIR.toString(), </span>
+<span class="new"> 708             "--module=test/launcher.Main", </span>
+<span class="new"> 709             "--help"</span>
+<span class="new"> 710         );</span>
+<span class="new"> 711 </span>
+<span class="new"> 712         // There will be no known application arguments</span>
+<span class="new"> 713         tr.contains("Warning: first app arg index not found, -1");</span>
+<span class="new"> 714         if (!tr.testStatus) {</span>
+<span class="new"> 715             System.out.println("Error: Didn't find arg index of -1");</span>
+<span class="new"> 716             System.out.println(tr);</span>
+<span class="new"> 717         }</span>
+<span class="new"> 718 </span>
+<span class="new"> 719         // There will be no argument expansion performed</span>
+<span class="new"> 720         tr.notContains("F--help");</span>
+<span class="new"> 721         if (!tr.testStatus) {</span>
+<span class="new"> 722             System.out.println("Error: Somehow we processed application arguments, not expecting to see F--help");</span>
+<span class="new"> 723             System.out.println(tr);</span>
+<span class="new"> 724         }</span>
+<span class="new"> 725 </span>
+<span class="new"> 726         // Run with the supported module command line option</span>
+<span class="new"> 727         tr = doExec(</span>
+<span class="new"> 728             env, </span>
+<span class="new"> 729             javaCmd, </span>
+<span class="new"> 730             "--module-path=" + MODS_DIR.toString(), </span>
+<span class="new"> 731             "--module", "test/launcher.Main", </span>
+<span class="new"> 732             "--help"</span>
+<span class="new"> 733         );</span>
+<span class="new"> 734 </span>
+<span class="new"> 735         // We should find argument index</span>
+<span class="new"> 736         tr.contains("AppArgIndex: 4 points to --help");</span>
+<span class="new"> 737         if (!tr.testStatus) {</span>
+<span class="new"> 738             System.out.println("Error: Didn't find app arg index of 4 pointing to --help");</span>
+<span class="new"> 739             System.out.println(tr);</span>
+<span class="new"> 740         }</span>
+<span class="new"> 741         </span>
+<span class="new"> 742         // We should do proper argument expansion</span>
+<span class="new"> 743         tr.contains("F--help");</span>
+<span class="new"> 744         if (!tr.testStatus) {</span>
+<span class="new"> 745             System.out.println("Error: Didn't process application arguments properly, expecting to see F--help");</span>
+<span class="new"> 746             System.out.println(tr);</span>
+<span class="new"> 747         }</span>
+ 748     }
+ 749 
+ 750     /**
+ 751      * @param args the command line arguments
+ 752      * @throws java.io.FileNotFoundException
+ 753      */
+ 754     public static void main(String[] args) throws Exception {
+ 755         if (debug) {
+ 756             System.out.println("Starting Arrrghs tests");
+ 757         }
+ 758         Arrrghs a = new Arrrghs();
+ 759         a.run(args);
+ 760         if (testExitValue &gt; 0) {
+ 761             System.out.println("Total of " + testExitValue + " failed");
+ 762             System.exit(1);
+ 763         } else {
+ 764             System.out.println("All tests pass");
+ 765         }
+ 766     }
+ 767 }
+<a name="3" id="anc3"></a><b style="font-size: large; color: red">--- EOF ---</b>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre><form name="eof"><input name="value" value="3" type="hidden" /></form></body></html>
