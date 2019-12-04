@@ -1,0 +1,400 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>New test/jdk/tools/launcher/modules/basic/BasicTest.java</title>
+<body id="SUNWwebrev">
+<pre>
+   1 /*
+   2  * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 /**
+  25  * @test
+  26  * @library /test/lib
+  27  * @modules jdk.compiler
+  28  *          jdk.jartool
+  29  *          jdk.jlink
+  30  * @build BasicTest jdk.test.lib.compiler.CompilerUtils
+  31  * @run testng BasicTest
+  32  * @bug 8234076
+  33  * @summary Basic test of starting an application as a module
+  34  */
+  35 
+  36 import java.io.File;
+  37 import java.nio.file.Files;
+  38 import java.nio.file.Path;
+  39 import java.nio.file.Paths;
+  40 import java.util.spi.ToolProvider;
+  41 
+  42 import jdk.test.lib.compiler.CompilerUtils;
+  43 import jdk.test.lib.process.ProcessTools;
+  44 import jdk.test.lib.Utils;
+  45 
+  46 import org.testng.annotations.BeforeTest;
+  47 import org.testng.annotations.Test;
+  48 import static org.testng.Assert.*;
+  49 
+  50 
+  51 @Test
+  52 public class BasicTest {
+  53     private static final ToolProvider JAR_TOOL = ToolProvider.findFirst("jar")
+  54         .orElseThrow(() -&gt;
+  55             new RuntimeException("jar tool not found")
+  56         );
+  57     private static final ToolProvider JMOD_TOOL = ToolProvider.findFirst("jmod")
+  58         .orElseThrow(() -&gt;
+  59             new RuntimeException("jmod tool not found")
+  60         );
+  61 
+  62     private static final Path USER_DIR = Paths.get(System.getProperty("user.dir"));
+  63 
+  64     private static final String TEST_SRC = System.getProperty("test.src");
+  65 
+  66     private static final Path SRC_DIR = Paths.get(TEST_SRC, "src");
+  67     private static final Path MODS_DIR = Paths.get("mods");
+  68 
+  69     // the module name of the test module
+  70     private static final String TEST_MODULE = "test";
+  71 
+  72     // the module main class
+  73     private static final String MAIN_CLASS = "jdk.test.Main";
+  74 
+  75     // for Windows specific launcher tests
+  76     static final boolean IS_WINDOWS = System.getProperty("os.name", "unknown").startsWith("Windows");
+  77 
+  78     @BeforeTest
+  79     public void compileTestModule() throws Exception {
+  80 
+  81         // javac -d mods/$TESTMODULE src/$TESTMODULE/**
+  82         boolean compiled
+  83             = CompilerUtils.compile(SRC_DIR.resolve(TEST_MODULE),
+  84                                     MODS_DIR.resolve(TEST_MODULE));
+  85 
+  86         assertTrue(compiled, "test module did not compile");
+  87     }
+  88 
+  89     /**
+  90      * Execute "java" with the given arguments, returning the exit code.
+  91      */
+  92     private int exec(String... args) throws Exception {
+  93        return ProcessTools.executeTestJava(args)
+  94                 .outputTo(System.out)
+  95                 .errorTo(System.out)
+  96                 .getExitValue();
+  97     }
+  98 
+  99     
+ 100     /**
+ 101      * The initial module is loaded from an exploded module
+ 102      */
+ 103     public void testRunWithExplodedModule() throws Exception {
+ 104         String dir = MODS_DIR.toString();
+ 105         String subdir = MODS_DIR.resolve(TEST_MODULE).toString();
+ 106         String mid = TEST_MODULE + "/" + MAIN_CLASS;
+ 107 
+ 108         // java --module-path mods -module $TESTMODULE/$MAINCLASS
+ 109         int exitValue = exec("--module-path", dir, "--module", mid);
+ 110         assertTrue(exitValue == 0);
+ 111 
+ 112         // java --module-path mods/$TESTMODULE --module $TESTMODULE/$MAINCLASS
+ 113         exitValue = exec("--module-path", subdir, "--module", mid);
+ 114         assertTrue(exitValue == 0);
+ 115 
+ 116         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS
+ 117         exitValue = exec("--module-path=" + dir, "--module=" + mid);
+ 118         assertTrue(exitValue == 0);
+ 119 
+ 120         // java --module-path=mods/$TESTMODULE --module=$TESTMODULE/$MAINCLASS
+ 121         exitValue = exec("--module-path=" + subdir, "--module=" + mid);
+ 122         assertTrue(exitValue == 0);
+ 123 
+ 124         // java -p mods -m $TESTMODULE/$MAINCLASS
+ 125         exitValue = exec("-p", dir, "-m", mid);
+ 126         assertTrue(exitValue == 0);
+ 127 
+ 128         // java -p mods/$TESTMODULE -m $TESTMODULE/$MAINCLASS
+ 129         exitValue = exec("-p", subdir, "-m", mid);
+ 130         assertTrue(exitValue == 0);
+ 131     }
+ 132 
+ 133 
+ 134     /**
+ 135      * The initial module is loaded from a modular JAR file
+ 136      */
+ 137     public void testRunWithModularJar() throws Exception {
+ 138         Path dir = Files.createTempDirectory(USER_DIR, "mlib");
+ 139         Path jar = dir.resolve("m.jar");
+ 140 
+ 141         // jar --create ...
+ 142         String classes = MODS_DIR.resolve(TEST_MODULE).toString();
+ 143         String[] args = {
+ 144             "--create",
+ 145             "--file=" + jar,
+ 146             "--main-class=" + MAIN_CLASS,
+ 147             "-C", classes, "."
+ 148         };
+ 149         int rc = JAR_TOOL.run(System.out, System.out, args);
+ 150         assertTrue(rc == 0);
+ 151 
+ 152         // java --module-path mlib -module $TESTMODULE
+ 153         int exitValue = exec("--module-path", dir.toString(),
+ 154                              "--module", TEST_MODULE);
+ 155         assertTrue(exitValue == 0);
+ 156 
+ 157         // java --module-path mlib/m.jar -module $TESTMODULE
+ 158         exitValue = exec("--module-path", jar.toString(),
+ 159                          "--module", TEST_MODULE);
+ 160         assertTrue(exitValue == 0);
+ 161     }
+ 162 
+ 163 
+ 164     /**
+ 165      * Attempt to run with the initial module packaged as a JMOD file.
+ 166      */
+ 167     public void testTryRunWithJMod() throws Exception {
+ 168         Path dir = Files.createTempDirectory(USER_DIR, "mlib");
+ 169 
+ 170         // jmod create ...
+ 171         String cp = MODS_DIR.resolve(TEST_MODULE).toString();
+ 172         String jmod = dir.resolve("m.jmod").toString();
+ 173         String[] args = {
+ 174             "create",
+ 175             "--class-path", cp,
+ 176             "--main-class", MAIN_CLASS,
+ 177             jmod
+ 178         };
+ 179 
+ 180         assertEquals(JMOD_TOOL.run(System.out, System.out, args), 0);
+ 181 
+ 182         // java --module-path mods --module $TESTMODULE
+ 183         int exitValue = exec("--module-path", dir.toString(),
+ 184                              "--module", TEST_MODULE);
+ 185         assertTrue(exitValue != 0);
+ 186     }
+ 187 
+ 188 
+ 189     /**
+ 190      * Run the test with a non-existent file on the application module path.
+ 191      * It should be silently ignored.
+ 192      */
+ 193     public void testRunWithNonExistentEntry() throws Exception {
+ 194         String mp = "DoesNotExist" + File.pathSeparator + MODS_DIR.toString();
+ 195         String mid = TEST_MODULE + "/" + MAIN_CLASS;
+ 196 
+ 197         // java --module-path mods --module $TESTMODULE/$MAINCLASS
+ 198         int exitValue = exec("--module-path", mp, "--module", mid);
+ 199         assertTrue(exitValue == 0);
+ 200     }
+ 201 
+ 202 
+ 203     /**
+ 204      * Attempt to run an unknown initial module
+ 205      */
+ 206     public void testTryRunWithBadModule() throws Exception {
+ 207         String modulepath = MODS_DIR.toString();
+ 208 
+ 209         // java --module-path mods -m $TESTMODULE
+ 210         int exitValue = exec("--module-path", modulepath, "-m", "rhubarb");
+ 211         assertTrue(exitValue != 0);
+ 212     }
+ 213 
+ 214 
+ 215     /**
+ 216      * Attempt to run with -m specifying a main class that does not
+ 217      * exist.
+ 218      */
+ 219     public void testTryRunWithBadMainClass() throws Exception {
+ 220         String modulepath = MODS_DIR.toString();
+ 221         String mid = TEST_MODULE + "/p.rhubarb";
+ 222 
+ 223         // java --module-path mods -m $TESTMODULE/$MAINCLASS
+ 224         int exitValue = exec("--module-path", modulepath, "-m", mid);
+ 225         assertTrue(exitValue != 0);
+ 226     }
+ 227 
+ 228 
+ 229     /**
+ 230      * Attempt to run with -m specifying a modular JAR that does not have
+ 231      * a MainClass attribute
+ 232      */
+ 233     public void testTryRunWithMissingMainClass() throws Exception {
+ 234         Path dir = Files.createTempDirectory(USER_DIR, "mlib");
+ 235 
+ 236         // jar --create ...
+ 237         String classes = MODS_DIR.resolve(TEST_MODULE).toString();
+ 238         String jar = dir.resolve("m.jar").toString();
+ 239         String[] args = {
+ 240             "--create",
+ 241             "--file=" + jar,
+ 242             "-C", classes, "."
+ 243         };
+ 244         int rc = JAR_TOOL.run(System.out, System.out, args);
+ 245         assertTrue(rc == 0);
+ 246 
+ 247         // java --module-path mods -m $TESTMODULE
+ 248         int exitValue = exec("--module-path", dir.toString(), "-m", TEST_MODULE);
+ 249         assertTrue(exitValue != 0);
+ 250     }
+ 251 
+ 252 
+ 253     /**
+ 254      * Attempt to run with -m specifying a main class that is a different
+ 255      * module to that specified to -m
+ 256      */
+ 257     public void testTryRunWithMainClassInWrongModule() throws Exception {
+ 258         String modulepath = MODS_DIR.toString();
+ 259         String mid = "java.base/" + MAIN_CLASS;
+ 260 
+ 261         // java --module-path mods --module $TESTMODULE/$MAINCLASS
+ 262         int exitValue = exec("--module-path", modulepath, "--module", mid);
+ 263         assertTrue(exitValue != 0);
+ 264     }
+ 265 
+ 266     /**
+ 267      * Helper method that creates a ProcessBuilder with command line arguments
+ 268      * while setting the _JAVA_LAUNCHER_DEBUG environment variable.
+ 269      */
+ 270     private ProcessBuilder createProcessWithLauncherDebugging(String... cmds) {
+ 271         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));
+ 272         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");
+ 273 
+ 274         return pb;        
+ 275     }
+ 276 
+ 277     /**
+ 278      * Test the ability for the Windows launcher to detect that the first app 
+ 279      * argument launcher index is -1 when all passed in command line arguments are 
+ 280      * prefixed with a dash. 
+ 281      * 
+ 282      * These tests are not expected to work on *nixes, and are ignored.
+ 283      */
+ 284     public void testForNegativeArgumentIndex() throws Exception {
+ 285         if (!IS_WINDOWS) {
+ 286             return;
+ 287         }
+ 288 
+ 289         String dir = MODS_DIR.toString();
+ 290         String mid = TEST_MODULE + "/" + MAIN_CLASS;
+ 291 
+ 292         // java --module-path=mods -module=$TESTMODULE/$MAINCLASS --help
+ 293         // When the first app arg index isn't found we will not perform argument expansion
+ 294         ProcessTools.executeProcess(
+ 295             createProcessWithLauncherDebugging(
+ 296                 "--module-path=" + dir,
+ 297                 "--module=" + mid,
+ 298                 "--help"))
+ 299             .outputTo(System.out)
+ 300             .errorTo(System.out)
+ 301             .shouldContain("Warning: first app arg index not found, -1")
+ 302             .shouldNotContain("F--help");
+ 303 
+ 304         // java --module-path=mods -module $TESTMODULE/$MAINCLASS --help
+ 305         // When we find the first app argument correctly, argument expansion is performed
+ 306         ProcessTools.executeProcess(
+ 307             createProcessWithLauncherDebugging(
+ 308                 "--module-path=" + dir,
+ 309                 "--module", mid,
+ 310                 "--help"))
+ 311             .outputTo(System.out)
+ 312             .errorTo(System.out)
+ 313             .shouldContain("points to --help")
+ 314             .shouldContain("F--help");
+ 315     } 
+ 316 
+ 317 }
+</pre></body></html>

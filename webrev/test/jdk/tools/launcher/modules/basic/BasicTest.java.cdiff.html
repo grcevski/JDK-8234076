@@ -1,0 +1,190 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Cdiff test/jdk/tools/launcher/modules/basic/BasicTest.java</title>
+</head>
+<body id="SUNWwebrev">
+<center><a href='../../../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../index.html' target='_top'>index</a> next &gt</center>
+<h2>test/jdk/tools/launcher/modules/basic/BasicTest.java</h2>
+        <a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+        <pre>
+<hr /><span class="oldmarker">*** 27,36 ****</span>
+<span class="newmarker">--- 27,37 ----</span>
+   * @modules jdk.compiler
+   *          jdk.jartool
+   *          jdk.jlink
+   * @build BasicTest jdk.test.lib.compiler.CompilerUtils
+   * @run testng BasicTest
+<span class="new">+  * @bug 8234076</span>
+   * @summary Basic test of starting an application as a module
+   */
+  
+  import java.io.File;
+  import java.nio.file.Files;
+<hr /><span class="oldmarker">*** 38,47 ****</span>
+<span class="newmarker">--- 39,49 ----</span>
+  import java.nio.file.Paths;
+  import java.util.spi.ToolProvider;
+  
+  import jdk.test.lib.compiler.CompilerUtils;
+  import jdk.test.lib.process.ProcessTools;
+<span class="new">+ import jdk.test.lib.Utils;</span>
+  
+  import org.testng.annotations.BeforeTest;
+  import org.testng.annotations.Test;
+  import static org.testng.Assert.*;
+  
+<hr /><span class="oldmarker">*** 68,77 ****</span>
+<span class="newmarker">--- 70,81 ----</span>
+      private static final String TEST_MODULE = "test";
+  
+      // the module main class
+      private static final String MAIN_CLASS = "jdk.test.Main";
+  
+<span class="new">+     // for Windows specific launcher tests</span>
+<span class="new">+     static final boolean IS_WINDOWS = System.getProperty("os.name", "unknown").startsWith("Windows");</span>
+  
+      @BeforeTest
+      public void compileTestModule() throws Exception {
+  
+          // javac -d mods/$TESTMODULE src/$TESTMODULE/**
+<hr /><span class="oldmarker">*** 257,262 ****</span>
+<span class="newmarker">--- 261,317 ----</span>
+          // java --module-path mods --module $TESTMODULE/$MAINCLASS
+          int exitValue = exec("--module-path", modulepath, "--module", mid);
+          assertTrue(exitValue != 0);
+      }
+  
+<span class="new">+     /**</span>
+<span class="new">+      * Helper method that creates a ProcessBuilder with command line arguments</span>
+<span class="new">+      * while setting the _JAVA_LAUNCHER_DEBUG environment variable.</span>
+<span class="new">+      */</span>
+<span class="new">+     private ProcessBuilder createProcessWithLauncherDebugging(String... cmds) {</span>
+<span class="new">+         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));</span>
+<span class="new">+         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");</span>
+<span class="new">+ </span>
+<span class="new">+         return pb;        </span>
+<span class="new">+     }</span>
+<span class="new">+ </span>
+<span class="new">+     /**</span>
+<span class="new">+      * Test the ability for the Windows launcher to detect that the first app </span>
+<span class="new">+      * argument launcher index is -1 when all passed in command line arguments are </span>
+<span class="new">+      * prefixed with a dash. </span>
+<span class="new">+      * </span>
+<span class="new">+      * These tests are not expected to work on *nixes, and are ignored.</span>
+<span class="new">+      */</span>
+<span class="new">+     public void testForNegativeArgumentIndex() throws Exception {</span>
+<span class="new">+         if (!IS_WINDOWS) {</span>
+<span class="new">+             return;</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         String dir = MODS_DIR.toString();</span>
+<span class="new">+         String mid = TEST_MODULE + "/" + MAIN_CLASS;</span>
+<span class="new">+ </span>
+<span class="new">+         // java --module-path=mods -module=$TESTMODULE/$MAINCLASS --help</span>
+<span class="new">+         // When the first app arg index isn't found we will not perform argument expansion</span>
+<span class="new">+         ProcessTools.executeProcess(</span>
+<span class="new">+             createProcessWithLauncherDebugging(</span>
+<span class="new">+                 "--module-path=" + dir,</span>
+<span class="new">+                 "--module=" + mid,</span>
+<span class="new">+                 "--help"))</span>
+<span class="new">+             .outputTo(System.out)</span>
+<span class="new">+             .errorTo(System.out)</span>
+<span class="new">+             .shouldContain("Warning: first app arg index not found, -1")</span>
+<span class="new">+             .shouldNotContain("F--help");</span>
+<span class="new">+ </span>
+<span class="new">+         // java --module-path=mods -module $TESTMODULE/$MAINCLASS --help</span>
+<span class="new">+         // When we find the first app argument correctly, argument expansion is performed</span>
+<span class="new">+         ProcessTools.executeProcess(</span>
+<span class="new">+             createProcessWithLauncherDebugging(</span>
+<span class="new">+                 "--module-path=" + dir,</span>
+<span class="new">+                 "--module", mid,</span>
+<span class="new">+                 "--help"))</span>
+<span class="new">+             .outputTo(System.out)</span>
+<span class="new">+             .errorTo(System.out)</span>
+<span class="new">+             .shouldContain("points to --help")</span>
+<span class="new">+             .shouldContain("F--help");</span>
+<span class="new">+     } </span>
+<span class="new">+ </span>
+  }
+</pre>
+<center><a href='../../../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../index.html' target='_top'>index</a> next &gt</center>
+</body></html>
+
