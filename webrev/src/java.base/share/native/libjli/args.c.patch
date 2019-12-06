@@ -1,0 +1,11 @@
+--- old/src/java.base/share/native/libjli/args.c	2019-12-06 15:00:24.797454700 -0500
++++ new/src/java.base/share/native/libjli/args.c	2019-12-06 15:00:22.396406000 -0500
+@@ -130,6 +130,8 @@
+             }
+         } else if (JLI_StrCmp(arg, "--disable-@files") == 0) {
+             stopExpansion = JNI_TRUE;
++        } else if (JLI_StrCCmp(arg, "--module=") == 0) {
++            idx = argsCount;
+         }
+     } else {
+         if (!expectingNoDashArg) {

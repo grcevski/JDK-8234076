@@ -121,6 +121,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
   41 import jdk.test.lib.compiler.CompilerUtils;
   42 import jdk.test.lib.process.ProcessTools;
 
+
   43 
   44 import org.testng.annotations.BeforeTest;
   45 import org.testng.annotations.Test;
@@ -175,7 +176,6 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
   92                 .getExitValue();
 
 </pre><hr></hr><pre>
- 241         assertTrue(rc == 0);
  242 
  243         // java --module-path mods -m $TESTMODULE
  244         int exitValue = exec("--module-path", dir.toString(), "-m", TEST_MODULE);
@@ -195,58 +195,90 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  258         int exitValue = exec("--module-path", modulepath, "--module", mid);
  259         assertTrue(exitValue != 0);
  260     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
  261 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  262 }
 </pre></td><td><pre>
 
@@ -283,134 +315,166 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
   41 
   42 import jdk.test.lib.compiler.CompilerUtils;
   43 import jdk.test.lib.process.ProcessTools;
-<span class="new">  44 import jdk.test.lib.Utils;</span>
-  45 
-  46 import org.testng.annotations.BeforeTest;
-  47 import org.testng.annotations.Test;
-  48 import static org.testng.Assert.*;
-  49 
+<span class="new">  44 import jdk.test.lib.process.OutputAnalyzer;</span>
+<span class="new">  45 import jdk.test.lib.Utils;</span>
+  46 
+  47 import org.testng.annotations.BeforeTest;
+  48 import org.testng.annotations.Test;
+  49 import static org.testng.Assert.*;
   50 
-  51 @Test
-  52 public class BasicTest {
-  53     private static final ToolProvider JAR_TOOL = ToolProvider.findFirst("jar")
-  54         .orElseThrow(() -&gt;
-  55             new RuntimeException("jar tool not found")
-  56         );
-  57     private static final ToolProvider JMOD_TOOL = ToolProvider.findFirst("jmod")
-  58         .orElseThrow(() -&gt;
-  59             new RuntimeException("jmod tool not found")
-  60         );
-  61 
-  62     private static final Path USER_DIR = Paths.get(System.getProperty("user.dir"));
-  63 
-  64     private static final String TEST_SRC = System.getProperty("test.src");
-  65 
-  66     private static final Path SRC_DIR = Paths.get(TEST_SRC, "src");
-  67     private static final Path MODS_DIR = Paths.get("mods");
-  68 
-  69     // the module name of the test module
-  70     private static final String TEST_MODULE = "test";
-  71 
-  72     // the module main class
-  73     private static final String MAIN_CLASS = "jdk.test.Main";
-  74 
-<span class="new">  75     // for Windows specific launcher tests</span>
-<span class="new">  76     static final boolean IS_WINDOWS = System.getProperty("os.name", "unknown").startsWith("Windows");</span>
-  77 
-  78     @BeforeTest
-  79     public void compileTestModule() throws Exception {
-  80 
-  81         // javac -d mods/$TESTMODULE src/$TESTMODULE/**
-  82         boolean compiled
-  83             = CompilerUtils.compile(SRC_DIR.resolve(TEST_MODULE),
-  84                                     MODS_DIR.resolve(TEST_MODULE));
-  85 
-  86         assertTrue(compiled, "test module did not compile");
-  87     }
-  88 
-  89     /**
-  90      * Execute "java" with the given arguments, returning the exit code.
-  91      */
-  92     private int exec(String... args) throws Exception {
-  93        return ProcessTools.executeTestJava(args)
-  94                 .outputTo(System.out)
-  95                 .errorTo(System.out)
-  96                 .getExitValue();
+  51 
+  52 @Test
+  53 public class BasicTest {
+  54     private static final ToolProvider JAR_TOOL = ToolProvider.findFirst("jar")
+  55         .orElseThrow(() -&gt;
+  56             new RuntimeException("jar tool not found")
+  57         );
+  58     private static final ToolProvider JMOD_TOOL = ToolProvider.findFirst("jmod")
+  59         .orElseThrow(() -&gt;
+  60             new RuntimeException("jmod tool not found")
+  61         );
+  62 
+  63     private static final Path USER_DIR = Paths.get(System.getProperty("user.dir"));
+  64 
+  65     private static final String TEST_SRC = System.getProperty("test.src");
+  66 
+  67     private static final Path SRC_DIR = Paths.get(TEST_SRC, "src");
+  68     private static final Path MODS_DIR = Paths.get("mods");
+  69 
+  70     // the module name of the test module
+  71     private static final String TEST_MODULE = "test";
+  72 
+  73     // the module main class
+  74     private static final String MAIN_CLASS = "jdk.test.Main";
+  75 
+<span class="new">  76     // for Windows specific launcher tests</span>
+<span class="new">  77     static final boolean IS_WINDOWS = System.getProperty("os.name", "unknown").startsWith("Windows");</span>
+  78 
+  79     @BeforeTest
+  80     public void compileTestModule() throws Exception {
+  81 
+  82         // javac -d mods/$TESTMODULE src/$TESTMODULE/**
+  83         boolean compiled
+  84             = CompilerUtils.compile(SRC_DIR.resolve(TEST_MODULE),
+  85                                     MODS_DIR.resolve(TEST_MODULE));
+  86 
+  87         assertTrue(compiled, "test module did not compile");
+  88     }
+  89 
+  90     /**
+  91      * Execute "java" with the given arguments, returning the exit code.
+  92      */
+  93     private int exec(String... args) throws Exception {
+  94        return ProcessTools.executeTestJava(args)
+  95                 .outputTo(System.out)
+  96                 .errorTo(System.out)
+  97                 .getExitValue();
 
 </pre><hr></hr><pre>
- 245         assertTrue(rc == 0);
- 246 
- 247         // java --module-path mods -m $TESTMODULE
- 248         int exitValue = exec("--module-path", dir.toString(), "-m", TEST_MODULE);
- 249         assertTrue(exitValue != 0);
- 250     }
- 251 
+ 247 
+ 248         // java --module-path mods -m $TESTMODULE
+ 249         int exitValue = exec("--module-path", dir.toString(), "-m", TEST_MODULE);
+ 250         assertTrue(exitValue != 0);
+ 251     }
  252 
- 253     /**
- 254      * Attempt to run with -m specifying a main class that is a different
- 255      * module to that specified to -m
- 256      */
- 257     public void testTryRunWithMainClassInWrongModule() throws Exception {
- 258         String modulepath = MODS_DIR.toString();
- 259         String mid = "java.base/" + MAIN_CLASS;
- 260 
- 261         // java --module-path mods --module $TESTMODULE/$MAINCLASS
- 262         int exitValue = exec("--module-path", modulepath, "--module", mid);
- 263         assertTrue(exitValue != 0);
- 264     }
-<span class="new"> 265 </span>
-<span class="new"> 266     /**</span>
-<span class="new"> 267      * Helper method that creates a ProcessBuilder with command line arguments</span>
-<span class="new"> 268      * while setting the _JAVA_LAUNCHER_DEBUG environment variable.</span>
-<span class="new"> 269      */</span>
-<span class="new"> 270     private ProcessBuilder createProcessWithLauncherDebugging(String... cmds) {</span>
-<span class="new"> 271         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));</span>
-<span class="new"> 272         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");</span>
-<span class="new"> 273 </span>
-<span class="new"> 274         return pb;        </span>
-<span class="new"> 275     }</span>
-<span class="new"> 276 </span>
-<span class="new"> 277     /**</span>
-<span class="new"> 278      * Test the ability for the Windows launcher to detect that the first app </span>
-<span class="new"> 279      * argument launcher index is -1 when all passed in command line arguments are </span>
-<span class="new"> 280      * prefixed with a dash. </span>
-<span class="new"> 281      * </span>
-<span class="new"> 282      * These tests are not expected to work on *nixes, and are ignored.</span>
-<span class="new"> 283      */</span>
-<span class="new"> 284     public void testForNegativeArgumentIndex() throws Exception {</span>
-<span class="new"> 285         if (!IS_WINDOWS) {</span>
-<span class="new"> 286             return;</span>
-<span class="new"> 287         }</span>
-<span class="new"> 288 </span>
-<span class="new"> 289         String dir = MODS_DIR.toString();</span>
-<span class="new"> 290         String mid = TEST_MODULE + "/" + MAIN_CLASS;</span>
-<span class="new"> 291 </span>
-<span class="new"> 292         // java --module-path=mods -module=$TESTMODULE/$MAINCLASS --help</span>
-<span class="new"> 293         // When the first app arg index isn't found we will not perform argument expansion</span>
-<span class="new"> 294         ProcessTools.executeProcess(</span>
-<span class="new"> 295             createProcessWithLauncherDebugging(</span>
-<span class="new"> 296                 "--module-path=" + dir,</span>
-<span class="new"> 297                 "--module=" + mid,</span>
-<span class="new"> 298                 "--help"))</span>
-<span class="new"> 299             .outputTo(System.out)</span>
-<span class="new"> 300             .errorTo(System.out)</span>
-<span class="new"> 301             .shouldContain("Warning: first app arg index not found, -1")</span>
-<span class="new"> 302             .shouldNotContain("F--help");</span>
-<span class="new"> 303 </span>
-<span class="new"> 304         // java --module-path=mods -module $TESTMODULE/$MAINCLASS --help</span>
-<span class="new"> 305         // When we find the first app argument correctly, argument expansion is performed</span>
-<span class="new"> 306         ProcessTools.executeProcess(</span>
-<span class="new"> 307             createProcessWithLauncherDebugging(</span>
-<span class="new"> 308                 "--module-path=" + dir,</span>
-<span class="new"> 309                 "--module", mid,</span>
-<span class="new"> 310                 "--help"))</span>
-<span class="new"> 311             .outputTo(System.out)</span>
-<span class="new"> 312             .errorTo(System.out)</span>
-<span class="new"> 313             .shouldContain("points to --help")</span>
-<span class="new"> 314             .shouldContain("F--help");</span>
-<span class="new"> 315     } </span>
- 316 
- 317 }
+ 253 
+ 254     /**
+ 255      * Attempt to run with -m specifying a main class that is a different
+ 256      * module to that specified to -m
+ 257      */
+ 258     public void testTryRunWithMainClassInWrongModule() throws Exception {
+ 259         String modulepath = MODS_DIR.toString();
+ 260         String mid = "java.base/" + MAIN_CLASS;
+ 261 
+ 262         // java --module-path mods --module $TESTMODULE/$MAINCLASS
+ 263         int exitValue = exec("--module-path", modulepath, "--module", mid);
+ 264         assertTrue(exitValue != 0);
+ 265     }
+ 266 
+<span class="new"> 267 </span>
+<span class="new"> 268     /**</span>
+<span class="new"> 269      * Helper method that creates a ProcessBuilder with command line arguments</span>
+<span class="new"> 270      * while setting the _JAVA_LAUNCHER_DEBUG environment variable.</span>
+<span class="new"> 271      */</span>
+<span class="new"> 272     private ProcessBuilder createProcessWithLauncherDebugging(String... cmds) {</span>
+<span class="new"> 273         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));</span>
+<span class="new"> 274         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");</span>
+<span class="new"> 275 </span>
+<span class="new"> 276         return pb;        </span>
+<span class="new"> 277     }</span>
+<span class="new"> 278 </span>
+<span class="new"> 279      /**</span>
+<span class="new"> 280      * Test the ability for the Windows launcher to do proper application argument </span>
+<span class="new"> 281      * detection and expansion, when using the long form module option and all passed in  </span>
+<span class="new"> 282      * command line arguments are prefixed with a dash. </span>
+<span class="new"> 283      * </span>
+<span class="new"> 284      * These tests are not expected to work on *nixes, and are ignored.</span>
+<span class="new"> 285      */</span>
+<span class="new"> 286     public void testWindowsWithLongFormModuleOption() throws Exception {</span>
+<span class="new"> 287         if (!IS_WINDOWS) {</span>
+<span class="new"> 288             return;</span>
+<span class="new"> 289         }</span>
+<span class="new"> 290 </span>
+<span class="new"> 291         String dir = MODS_DIR.toString();</span>
+<span class="new"> 292         String mid = TEST_MODULE + "/" + MAIN_CLASS;</span>
+<span class="new"> 293 </span>
+<span class="new"> 294         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS --help</span>
+<span class="new"> 295         // We should be able to find the argument --help as an application argument</span>
+<span class="new"> 296         ProcessTools.executeProcess(</span>
+<span class="new"> 297             createProcessWithLauncherDebugging(</span>
+<span class="new"> 298                 "--module-path=" + dir,</span>
+<span class="new"> 299                 "--module=" + mid,</span>
+<span class="new"> 300                 "--help"))</span>
+<span class="new"> 301             .outputTo(System.out)</span>
+<span class="new"> 302             .errorTo(System.out)</span>
+<span class="new"> 303             .shouldContain("F--help");</span>
+<span class="new"> 304 </span>
+<span class="new"> 305         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS &lt;...src/test&gt;/*.java --help</span>
+<span class="new"> 306         // We should be able to see argument expansion happen</span>
+<span class="new"> 307         ProcessTools.executeProcess(</span>
+<span class="new"> 308             createProcessWithLauncherDebugging(</span>
+<span class="new"> 309                 "--module-path=" + dir,</span>
+<span class="new"> 310                 "--module=" + mid,</span>
+<span class="new"> 311                 SRC_DIR.resolve(TEST_MODULE).toString() + "\\*.java",</span>
+<span class="new"> 312                 "--help"))</span>
+<span class="new"> 313             .outputTo(System.out)</span>
+<span class="new"> 314             .errorTo(System.out)</span>
+<span class="new"> 315             .shouldContain("F--help")</span>
+<span class="new"> 316             .shouldContain("module-info.java");</span>
+<span class="new"> 317     } </span>
+<span class="new"> 318 </span>
+<span class="new"> 319 </span>
+<span class="new"> 320     /**</span>
+<span class="new"> 321      * Test that --module= is terminating for VM argument processing just like --module</span>
+<span class="new"> 322      */</span>
+<span class="new"> 323     public void testLongFormModuleOptionTermination() throws Exception {</span>
+<span class="new"> 324         String dir = MODS_DIR.toString();</span>
+<span class="new"> 325         String mid = TEST_MODULE + "/" + MAIN_CLASS;</span>
+<span class="new"> 326 </span>
+<span class="new"> 327         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS --module-path=mods --module=$TESTMODULE/$MAINCLASS</span>
+<span class="new"> 328         // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be </span>
+<span class="new"> 329         // deemed as application arguments</span>
+<span class="new"> 330         OutputAnalyzer output = ProcessTools.executeProcess(</span>
+<span class="new"> 331             createProcessWithLauncherDebugging(</span>
+<span class="new"> 332                 "--module-path=" + dir,</span>
+<span class="new"> 333                 "--module=" + mid,</span>
+<span class="new"> 334                 "--module-path=" + dir,</span>
+<span class="new"> 335                 "--module=" + mid))</span>
+<span class="new"> 336             .outputTo(System.out)</span>
+<span class="new"> 337             .errorTo(System.out)</span>
+<span class="new"> 338             .shouldContain("argv[ 0] = '--module-path=" + dir)</span>
+<span class="new"> 339             .shouldContain("argv[ 1] = '--module=" + mid);</span>
+<span class="new"> 340 </span>
+<span class="new"> 341         if (IS_WINDOWS) {</span>
+<span class="new"> 342             output.shouldContain("F--module-path=" + dir).shouldContain("F--module=" + mid);</span>
+<span class="new"> 343         }</span>
+<span class="new"> 344 </span>
+<span class="new"> 345         // java --module=$TESTMODULE/$MAINCLASS --module-path=mods</span>
+<span class="new"> 346         // This command line will not work as --module= is terminating and the module will be not found </span>
+<span class="new"> 347         int exitValue = exec("--module=" + mid, "--module-path" + dir);</span>
+<span class="new"> 348         assertTrue(exitValue != 0);            </span>
+<span class="new"> 349     }</span>
+ 350 }
 </pre></td>
 </tr></table>
 <center><a href='../../../../../../src/java.base/windows/native/libjli/java_md.c.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../../../index.html' target='_top'>index</a> next &gt</center>
