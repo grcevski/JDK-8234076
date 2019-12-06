@@ -179,7 +179,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
   97                 .getExitValue();
   98     }
   99 
- 100     
+ 100 
  101     /**
  102      * The initial module is loaded from an exploded module
  103      */
@@ -355,14 +355,14 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  273         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));
  274         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");
  275 
- 276         return pb;        
+ 276         return pb;
  277     }
  278 
  279      /**
- 280      * Test the ability for the Windows launcher to do proper application argument 
- 281      * detection and expansion, when using the long form module option and all passed in  
- 282      * command line arguments are prefixed with a dash. 
- 283      * 
+ 280      * Test the ability for the Windows launcher to do proper application argument
+ 281      * detection and expansion, when using the long form module option and all passed in
+ 282      * command line arguments are prefixed with a dash.
+ 283      *
  284      * These tests are not expected to work on *nixes, and are ignored.
  285      */
  286     public void testWindowsWithLongFormModuleOption() throws Exception {
@@ -396,7 +396,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  314             .errorTo(System.out)
  315             .shouldContain("F--help")
  316             .shouldContain("module-info.java");
- 317     } 
+ 317     }
  318 
  319 
  320     /**
@@ -407,7 +407,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  325         String mid = TEST_MODULE + "/" + MAIN_CLASS;
  326 
  327         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS --module-path=mods --module=$TESTMODULE/$MAINCLASS
- 328         // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be 
+ 328         // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be
  329         // deemed as application arguments
  330         OutputAnalyzer output = ProcessTools.executeProcess(
  331             createProcessWithLauncherDebugging(
@@ -425,9 +425,9 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  343         }
  344 
  345         // java --module=$TESTMODULE/$MAINCLASS --module-path=mods
- 346         // This command line will not work as --module= is terminating and the module will be not found 
+ 346         // This command line will not work as --module= is terminating and the module will be not found
  347         int exitValue = exec("--module=" + mid, "--module-path" + dir);
- 348         assertTrue(exitValue != 0);            
+ 348         assertTrue(exitValue != 0);
  349     }
  350 }
 </pre></body></html>

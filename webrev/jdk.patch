@@ -1,5 +1,5 @@
---- old/src/java.base/share/native/libjli/args.c	2019-12-06 15:00:24.797454700 -0500
-+++ new/src/java.base/share/native/libjli/args.c	2019-12-06 15:00:22.396406000 -0500
+--- old/src/java.base/share/native/libjli/args.c	2019-12-06 15:12:10.223425900 -0500
++++ new/src/java.base/share/native/libjli/args.c	2019-12-06 15:12:09.494362900 -0500
 @@ -130,6 +130,8 @@
              }
          } else if (JLI_StrCmp(arg, "--disable-@files") == 0) {
@@ -9,8 +9,8 @@
          }
      } else {
          if (!expectingNoDashArg) {
---- old/src/java.base/windows/native/libjli/java_md.c	2019-12-06 15:00:30.193875400 -0500
-+++ new/src/java.base/windows/native/libjli/java_md.c	2019-12-06 15:00:29.362037800 -0500
+--- old/src/java.base/windows/native/libjli/java_md.c	2019-12-06 15:12:14.558661300 -0500
++++ new/src/java.base/windows/native/libjli/java_md.c	2019-12-06 15:12:13.866624400 -0500
 @@ -34,6 +34,7 @@
  #include <sys/stat.h>
  #include <wtypes.h>
@@ -26,7 +26,7 @@
 +
 +    // First arg index is NOT_FOUND
 +    if (idx < 0) {
-+        // The only allowed value should be NOT_FOUND (-1) unless another change introduces 
++        // The only allowed value should be NOT_FOUND (-1) unless another change introduces
 +        // a different negative index
 +        assert (idx == -1);
 +        JLI_TraceLauncher("Warning: first app arg index not found, %d\n", idx);
@@ -37,8 +37,8 @@
      isTool = (idx == 0);
      if (isTool) { idx++; } // skip tool name
      JLI_TraceLauncher("AppArgIndex: %d points to %s\n", idx, stdargs[idx].arg);
---- old/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-06 15:00:34.950065300 -0500
-+++ new/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-06 15:00:34.231117600 -0500
+--- old/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-06 15:12:18.855533500 -0500
++++ new/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-06 15:12:18.156512800 -0500
 @@ -29,6 +29,7 @@
   *          jdk.jlink
   * @build BasicTest jdk.test.lib.compiler.CompilerUtils
@@ -65,15 +65,6 @@
  
      @BeforeTest
      public void compileTestModule() throws Exception {
-@@ -92,7 +97,7 @@
-                 .getExitValue();
-     }
- 
--
-+    
-     /**
-      * The initial module is loaded from an exploded module
-      */
 @@ -259,4 +264,87 @@
          assertTrue(exitValue != 0);
      }
@@ -87,14 +78,14 @@
 +        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));
 +        pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");
 +
-+        return pb;        
++        return pb;
 +    }
 +
 +     /**
-+     * Test the ability for the Windows launcher to do proper application argument 
-+     * detection and expansion, when using the long form module option and all passed in  
-+     * command line arguments are prefixed with a dash. 
-+     * 
++     * Test the ability for the Windows launcher to do proper application argument
++     * detection and expansion, when using the long form module option and all passed in
++     * command line arguments are prefixed with a dash.
++     *
 +     * These tests are not expected to work on *nixes, and are ignored.
 +     */
 +    public void testWindowsWithLongFormModuleOption() throws Exception {
@@ -128,7 +119,7 @@
 +            .errorTo(System.out)
 +            .shouldContain("F--help")
 +            .shouldContain("module-info.java");
-+    } 
++    }
 +
 +
 +    /**
@@ -139,7 +130,7 @@
 +        String mid = TEST_MODULE + "/" + MAIN_CLASS;
 +
 +        // java --module-path=mods --module=$TESTMODULE/$MAINCLASS --module-path=mods --module=$TESTMODULE/$MAINCLASS
-+        // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be 
++        // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be
 +        // deemed as application arguments
 +        OutputAnalyzer output = ProcessTools.executeProcess(
 +            createProcessWithLauncherDebugging(
@@ -157,8 +148,8 @@
 +        }
 +
 +        // java --module=$TESTMODULE/$MAINCLASS --module-path=mods
-+        // This command line will not work as --module= is terminating and the module will be not found 
++        // This command line will not work as --module= is terminating and the module will be not found
 +        int exitValue = exec("--module=" + mid, "--module-path" + dir);
-+        assertTrue(exitValue != 0);            
++        assertTrue(exitValue != 0);
 +    }
  }

@@ -97,7 +97,7 @@ public class BasicTest {
                 .getExitValue();
     }
 
-    
+
     /**
      * The initial module is loaded from an exploded module
      */
@@ -273,14 +273,14 @@ public class BasicTest {
         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));
         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");
 
-        return pb;        
+        return pb;
     }
 
      /**
-     * Test the ability for the Windows launcher to do proper application argument 
-     * detection and expansion, when using the long form module option and all passed in  
-     * command line arguments are prefixed with a dash. 
-     * 
+     * Test the ability for the Windows launcher to do proper application argument
+     * detection and expansion, when using the long form module option and all passed in
+     * command line arguments are prefixed with a dash.
+     *
      * These tests are not expected to work on *nixes, and are ignored.
      */
     public void testWindowsWithLongFormModuleOption() throws Exception {
@@ -314,7 +314,7 @@ public class BasicTest {
             .errorTo(System.out)
             .shouldContain("F--help")
             .shouldContain("module-info.java");
-    } 
+    }
 
 
     /**
@@ -325,7 +325,7 @@ public class BasicTest {
         String mid = TEST_MODULE + "/" + MAIN_CLASS;
 
         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS --module-path=mods --module=$TESTMODULE/$MAINCLASS
-        // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be 
+        // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be
         // deemed as application arguments
         OutputAnalyzer output = ProcessTools.executeProcess(
             createProcessWithLauncherDebugging(
@@ -343,8 +343,8 @@ public class BasicTest {
         }
 
         // java --module=$TESTMODULE/$MAINCLASS --module-path=mods
-        // This command line will not work as --module= is terminating and the module will be not found 
+        // This command line will not work as --module= is terminating and the module will be not found
         int exitValue = exec("--module=" + mid, "--module-path" + dir);
-        assertTrue(exitValue != 0);            
+        assertTrue(exitValue != 0);
     }
 }

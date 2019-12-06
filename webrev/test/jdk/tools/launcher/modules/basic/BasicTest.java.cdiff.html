@@ -142,14 +142,14 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 <span class="new">+         ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(Utils.addTestJavaOpts(cmds));</span>
 <span class="new">+         pb.environment().put("_JAVA_LAUNCHER_DEBUG", "true");</span>
 <span class="new">+ </span>
-<span class="new">+         return pb;        </span>
+<span class="new">+         return pb;</span>
 <span class="new">+     }</span>
 <span class="new">+ </span>
 <span class="new">+      /**</span>
-<span class="new">+      * Test the ability for the Windows launcher to do proper application argument </span>
-<span class="new">+      * detection and expansion, when using the long form module option and all passed in  </span>
-<span class="new">+      * command line arguments are prefixed with a dash. </span>
-<span class="new">+      * </span>
+<span class="new">+      * Test the ability for the Windows launcher to do proper application argument</span>
+<span class="new">+      * detection and expansion, when using the long form module option and all passed in</span>
+<span class="new">+      * command line arguments are prefixed with a dash.</span>
+<span class="new">+      *</span>
 <span class="new">+      * These tests are not expected to work on *nixes, and are ignored.</span>
 <span class="new">+      */</span>
 <span class="new">+     public void testWindowsWithLongFormModuleOption() throws Exception {</span>
@@ -183,7 +183,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 <span class="new">+             .errorTo(System.out)</span>
 <span class="new">+             .shouldContain("F--help")</span>
 <span class="new">+             .shouldContain("module-info.java");</span>
-<span class="new">+     } </span>
+<span class="new">+     }</span>
 <span class="new">+ </span>
 <span class="new">+ </span>
 <span class="new">+     /**</span>
@@ -194,7 +194,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 <span class="new">+         String mid = TEST_MODULE + "/" + MAIN_CLASS;</span>
 <span class="new">+ </span>
 <span class="new">+         // java --module-path=mods --module=$TESTMODULE/$MAINCLASS --module-path=mods --module=$TESTMODULE/$MAINCLASS</span>
-<span class="new">+         // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be </span>
+<span class="new">+         // The first --module= will terminate the VM arguments processing. The second pair of module-path and module will be</span>
 <span class="new">+         // deemed as application arguments</span>
 <span class="new">+         OutputAnalyzer output = ProcessTools.executeProcess(</span>
 <span class="new">+             createProcessWithLauncherDebugging(</span>
@@ -212,9 +212,9 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 <span class="new">+         }</span>
 <span class="new">+ </span>
 <span class="new">+         // java --module=$TESTMODULE/$MAINCLASS --module-path=mods</span>
-<span class="new">+         // This command line will not work as --module= is terminating and the module will be not found </span>
+<span class="new">+         // This command line will not work as --module= is terminating and the module will be not found</span>
 <span class="new">+         int exitValue = exec("--module=" + mid, "--module-path" + dir);</span>
-<span class="new">+         assertTrue(exitValue != 0);            </span>
+<span class="new">+         assertTrue(exitValue != 0);</span>
 <span class="new">+     }</span>
   }
 </pre>
