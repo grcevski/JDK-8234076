@@ -1,0 +1,13 @@
+--- old/test/jdk/tools/launcher/TestSpecialArgs.java	2019-12-09 16:11:22.369108000 -0500
++++ new/test/jdk/tools/launcher/TestSpecialArgs.java	2019-12-09 16:11:20.780863000 -0500
+@@ -246,6 +246,10 @@
+         if (!tr.contains("Error: Could not find or load main class AbsentClass")) {
+             throw new RuntimeException("Test Fails");
+         }
++
++        // Make sure we handle correctly the module long form (--module=)
++        tr = doExec(javaCmd, "-XX:NativeMemoryTracking=summary", "--module=jdk.compiler/com.sun.tools.javac.Main", "--help");
++        ensureNoWarnings(tr);
+     }
+ 
+     void ensureNoWarnings(TestResult tr) {

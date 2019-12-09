@@ -1,0 +1,179 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff test/jdk/tools/launcher </title>
+</head><body id="SUNWwebrev">
+<center><a href='../../../../test/jdk/tools/launcher/ArgsEnvVar.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/modules/basic/BasicTest.java.sdiff.html' target='_top'>next &gt</a></center>
+<h2>test/jdk/tools/launcher/TestSpecialArgs.java</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+ 229         envMap.put("CLASSPATH", ".");
+ 230         tr = doExec(envMap, javaCmd, "Foo", "-XX:NativeMemoryTracking=summary");
+ 231         checkTestResult(tr);
+ 232 
+ 233         // should accept with no warnings
+ 234         tr = doExec(javaCmd, "-cp", jarFile.getName(),
+ 235                     "-XX:NativeMemoryTracking=summary", "Foo");
+ 236         ensureNoWarnings(tr);
+ 237 
+ 238         // should accept with no warnings
+ 239         tr = doExec(javaCmd, "-classpath", jarFile.getName(),
+ 240                     "-XX:NativeMemoryTracking=summary", "Foo");
+ 241         ensureNoWarnings(tr);
+ 242 
+ 243         // make sure a missing class is handled correctly, because the class
+ 244         // resolution is performed by the JVM.
+ 245         tr = doExec(javaCmd, "AbsentClass", "-XX:NativeMemoryTracking=summary");
+ 246         if (!tr.contains("Error: Could not find or load main class AbsentClass")) {
+ 247             throw new RuntimeException("Test Fails");
+ 248         }
+
+
+
+
+ 249     }
+ 250 
+ 251     void ensureNoWarnings(TestResult tr) {
+ 252         checkTestResult(tr);
+ 253         if (tr.contains("warning: Native Memory Tracking")) {
+ 254             System.err.println(tr.toString());
+ 255             throw new RuntimeException("Test Fails");
+ 256         }
+ 257     }
+ 258 
+ 259     void checkTestResult(TestResult tr) {
+ 260         if (!tr.isOK()) {
+ 261             System.err.println(tr.toString());
+ 262             throw new RuntimeException("Test Fails");
+ 263         }
+ 264     }
+ 265 }
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+ 229         envMap.put("CLASSPATH", ".");
+ 230         tr = doExec(envMap, javaCmd, "Foo", "-XX:NativeMemoryTracking=summary");
+ 231         checkTestResult(tr);
+ 232 
+ 233         // should accept with no warnings
+ 234         tr = doExec(javaCmd, "-cp", jarFile.getName(),
+ 235                     "-XX:NativeMemoryTracking=summary", "Foo");
+ 236         ensureNoWarnings(tr);
+ 237 
+ 238         // should accept with no warnings
+ 239         tr = doExec(javaCmd, "-classpath", jarFile.getName(),
+ 240                     "-XX:NativeMemoryTracking=summary", "Foo");
+ 241         ensureNoWarnings(tr);
+ 242 
+ 243         // make sure a missing class is handled correctly, because the class
+ 244         // resolution is performed by the JVM.
+ 245         tr = doExec(javaCmd, "AbsentClass", "-XX:NativeMemoryTracking=summary");
+ 246         if (!tr.contains("Error: Could not find or load main class AbsentClass")) {
+ 247             throw new RuntimeException("Test Fails");
+ 248         }
+<span class="new"> 249 </span>
+<span class="new"> 250         // Make sure we handle correctly the module long form (--module=)</span>
+<span class="new"> 251         tr = doExec(javaCmd, "-XX:NativeMemoryTracking=summary", "--module=jdk.compiler/com.sun.tools.javac.Main", "--help");</span>
+<span class="new"> 252         ensureNoWarnings(tr);</span>
+ 253     }
+ 254 
+ 255     void ensureNoWarnings(TestResult tr) {
+ 256         checkTestResult(tr);
+ 257         if (tr.contains("warning: Native Memory Tracking")) {
+ 258             System.err.println(tr.toString());
+ 259             throw new RuntimeException("Test Fails");
+ 260         }
+ 261     }
+ 262 
+ 263     void checkTestResult(TestResult tr) {
+ 264         if (!tr.isOK()) {
+ 265             System.err.println(tr.toString());
+ 266             throw new RuntimeException("Test Fails");
+ 267         }
+ 268     }
+ 269 }
+</pre></td>
+</tr></table>
+<center><a href='../../../../test/jdk/tools/launcher/ArgsEnvVar.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/modules/basic/BasicTest.java.sdiff.html' target='_top'>next &gt</a></center>
+</body></html>

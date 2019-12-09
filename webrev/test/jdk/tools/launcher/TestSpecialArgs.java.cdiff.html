@@ -77,50 +77,31 @@ a.print {display: none}
 hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 </style>
 
-<title>jdk Udiff src/java.base/share/native/libjli/args.c</title>
-
-<style type="text/css" media="screen">
-span.new {
-    color: blue;
-    font-weight: normal;
-}
-</style>
-
+<title>jdk Cdiff test/jdk/tools/launcher/TestSpecialArgs.java</title>
 </head>
 <body id="SUNWwebrev">
-<center>&lt prev <a href='../../../../../index.html' target='_top'>index</a> <a href='../../../../../src/java.base/windows/native/libjli/java_md.c.udiff.html' target='_top'>next &gt</a></center>
-<h2>src/java.base/share/native/libjli/args.c</h2>
+<center><a href='../../../../test/jdk/tools/launcher/ArgsEnvVar.java.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/modules/basic/BasicTest.java.cdiff.html' target='_top'>next &gt</a></center>
+<h2>test/jdk/tools/launcher/TestSpecialArgs.java</h2>
         <a class="print" href="javascript:print()">Print this page</a>
 <pre></pre>
         <pre>
-</pre><hr /><pre>
-<span class="newmarker">@@ -128,10 +128,12 @@</span>
-                 // We can not just update the idx here because if -jar @file
-                 // still need expansion of @file to get the argument for -jar
-             }
-         } else if (JLI_StrCmp(arg, "--disable-@files") == 0) {
-             stopExpansion = JNI_TRUE;
-<span class="new">+        } else if (JLI_StrCCmp(arg, "--module=") == 0) {</span>
-<span class="new">+            idx = argsCount;</span>
-         }
-     } else {
-         if (!expectingNoDashArg) {
-             // this is main class, argsCount is index to next arg
-             idx = argsCount;
-</pre><hr /><pre>
-<span class="newmarker">@@ -447,10 +449,11 @@</span>
- 
- int isTerminalOpt(char *arg) {
-     return JLI_StrCmp(arg, "-jar") == 0 ||
-            JLI_StrCmp(arg, "-m") == 0 ||
-            JLI_StrCmp(arg, "--module") == 0 ||
-<span class="new">+           JLI_StrCCmp(arg, "--module=") == 0 ||</span>
-            JLI_StrCmp(arg, "--dry-run") == 0 ||
-            JLI_StrCmp(arg, "-h") == 0 ||
-            JLI_StrCmp(arg, "-?") == 0 ||
-            JLI_StrCmp(arg, "-help") == 0 ||
-            JLI_StrCmp(arg, "--help") == 0 ||
+<hr /><span class="oldmarker">*** 244,253 ****</span>
+<span class="newmarker">--- 244,257 ----</span>
+          // resolution is performed by the JVM.
+          tr = doExec(javaCmd, "AbsentClass", "-XX:NativeMemoryTracking=summary");
+          if (!tr.contains("Error: Could not find or load main class AbsentClass")) {
+              throw new RuntimeException("Test Fails");
+          }
+<span class="new">+ </span>
+<span class="new">+         // Make sure we handle correctly the module long form (--module=)</span>
+<span class="new">+         tr = doExec(javaCmd, "-XX:NativeMemoryTracking=summary", "--module=jdk.compiler/com.sun.tools.javac.Main", "--help");</span>
+<span class="new">+         ensureNoWarnings(tr);</span>
+      }
+  
+      void ensureNoWarnings(TestResult tr) {
+          checkTestResult(tr);
+          if (tr.contains("warning: Native Memory Tracking")) {
 </pre>
-<center>&lt prev <a href='../../../../../index.html' target='_top'>index</a> <a href='../../../../../src/java.base/windows/native/libjli/java_md.c.udiff.html' target='_top'>next &gt</a></center>
+<center><a href='../../../../test/jdk/tools/launcher/ArgsEnvVar.java.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/modules/basic/BasicTest.java.cdiff.html' target='_top'>next &gt</a></center>
 </body></html>
 

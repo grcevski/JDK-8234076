@@ -1,5 +1,5 @@
---- old/src/java.base/share/native/libjli/args.c	2019-12-06 15:12:10.223425900 -0500
-+++ new/src/java.base/share/native/libjli/args.c	2019-12-06 15:12:09.494362900 -0500
+--- old/src/java.base/share/native/libjli/args.c	2019-12-09 16:10:27.275709300 -0500
++++ new/src/java.base/share/native/libjli/args.c	2019-12-09 16:10:25.175674000 -0500
 @@ -130,6 +130,8 @@
              }
          } else if (JLI_StrCmp(arg, "--disable-@files") == 0) {
@@ -9,3 +9,11 @@
          }
      } else {
          if (!expectingNoDashArg) {
+@@ -449,6 +451,7 @@
+     return JLI_StrCmp(arg, "-jar") == 0 ||
+            JLI_StrCmp(arg, "-m") == 0 ||
+            JLI_StrCmp(arg, "--module") == 0 ||
++           JLI_StrCCmp(arg, "--module=") == 0 ||
+            JLI_StrCmp(arg, "--dry-run") == 0 ||
+            JLI_StrCmp(arg, "-h") == 0 ||
+            JLI_StrCmp(arg, "-?") == 0 ||

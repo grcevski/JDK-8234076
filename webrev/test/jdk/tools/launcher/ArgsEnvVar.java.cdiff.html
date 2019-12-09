@@ -1,0 +1,225 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Cdiff test/jdk/tools/launcher/ArgsEnvVar.java</title>
+</head>
+<body id="SUNWwebrev">
+<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestSpecialArgs.java.cdiff.html' target='_top'>next &gt</a></center>
+<h2>test/jdk/tools/launcher/ArgsEnvVar.java</h2>
+        <a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+        <pre>
+<hr /><span class="oldmarker">*** 35,44 ****</span>
+<span class="newmarker">--- 35,46 ----</span>
+  import java.util.ArrayList;
+  import java.util.HashMap;
+  import java.util.List;
+  import java.util.Map;
+  import java.util.regex.Pattern;
+<span class="new">+ import java.nio.file.Paths;</span>
+<span class="new">+ import java.nio.file.Path;</span>
+  
+  public class ArgsEnvVar extends TestHelper {
+      private static File testJar = null;
+      private static Map&lt;String, String&gt; env = new HashMap&lt;&gt;();
+  
+<hr /><span class="oldmarker">*** 151,160 ****</span>
+<span class="newmarker">--- 153,163 ----</span>
+      public void noTerminalOpt() throws IOException {
+          List&lt;List&lt;String&gt;&gt; terminal_opts = List.of(
+                  List.of("-jar", "test.jar"),
+                  List.of("-m", "test/Foo"),
+                  List.of("--module", "test/Foo"),
+<span class="new">+                 List.of("--module=test/Foo"),</span>
+                  List.of("--dry-run"),
+                  List.of("-h"),
+                  List.of("-?"),
+                  List.of("-help"),
+                  List.of("--help"),
+<hr /><span class="oldmarker">*** 239,248 ****</span>
+<span class="newmarker">--- 242,346 ----</span>
+          env.put(JDK_JAVA_OPTIONS, "  --add-exports java.base/jdk.internal.misc=ALL-UNNAMED ");
+          tr = doExec(env, javaCmd, "-jar", "test.jar");
+          verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
+      }
+  
+<span class="new">+     /**</span>
+<span class="new">+      * Helper method to initialize a simple module that just prints the passed in arguments</span>
+<span class="new">+      */</span>
+<span class="new">+     private void initModulesDir(File modulesDir) throws IOException {</span>
+<span class="new">+         if (modulesDir.exists()) {</span>
+<span class="new">+             recursiveDelete(modulesDir);</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         modulesDir.mkdirs();</span>
+<span class="new">+ </span>
+<span class="new">+         File srcDir = new File(modulesDir, "src");</span>
+<span class="new">+         File modsDir = new File(modulesDir, "mods");</span>
+<span class="new">+         File testDir = new File(srcDir, "test");</span>
+<span class="new">+         File launcherTestDir = new File(testDir, "launcher");</span>
+<span class="new">+         srcDir.mkdir();</span>
+<span class="new">+         modsDir.mkdir();</span>
+<span class="new">+         testDir.mkdir();</span>
+<span class="new">+         launcherTestDir.mkdir();</span>
+<span class="new">+ </span>
+<span class="new">+         ArrayList&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();</span>
+<span class="new">+         scratchpad.add("module test {}");</span>
+<span class="new">+         createFile(new File(testDir, "module-info.java"), scratchpad);</span>
+<span class="new">+         scratchpad.clear();</span>
+<span class="new">+         scratchpad.add("package launcher;");</span>
+<span class="new">+         scratchpad.add("import java.util.Arrays;");</span>
+<span class="new">+         scratchpad.add("public class Main {");</span>
+<span class="new">+         scratchpad.add("public static void main(String[] args) {");</span>
+<span class="new">+         scratchpad.add("System.out.println(Arrays.toString(args));");</span>
+<span class="new">+         scratchpad.add("}");</span>
+<span class="new">+         scratchpad.add("}");</span>
+<span class="new">+         createFile(new File(launcherTestDir, "Main.java"), scratchpad);</span>
+<span class="new">+     }</span>
+<span class="new">+ </span>
+<span class="new">+     @Test</span>
+<span class="new">+     // That that we can correctly handle the module longform argument option</span>
+<span class="new">+     // when supplied in an argument file</span>
+<span class="new">+     public void modulesInArgsFile() throws IOException {</span>
+<span class="new">+         File cwd = new File(".");</span>
+<span class="new">+         File testModuleDir = new File(cwd, "modules_test");</span>
+<span class="new">+ </span>
+<span class="new">+         initModulesDir(testModuleDir);</span>
+<span class="new">+ </span>
+<span class="new">+         Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");</span>
+<span class="new">+         Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");</span>
+<span class="new">+ </span>
+<span class="new">+         // test module / main class</span>
+<span class="new">+         String MODULE_OPTION = "--module=test/launcher.Main";</span>
+<span class="new">+         String TEST_MODULE = "test";</span>
+<span class="new">+ </span>
+<span class="new">+         // javac -d mods/test src/test/**</span>
+<span class="new">+         TestResult tr = doExec(</span>
+<span class="new">+             javacCmd,</span>
+<span class="new">+             "-d", MODS_DIR.toString(),</span>
+<span class="new">+             "--module-source-path", SRC_DIR.toString(),</span>
+<span class="new">+             "--module", TEST_MODULE);</span>
+<span class="new">+ </span>
+<span class="new">+         if (!tr.isOK()) {</span>
+<span class="new">+             System.out.println("test did not compile");</span>
+<span class="new">+             throw new RuntimeException("Error: modules test did not compile");</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         // verify the terminating ability of --module= through environment variables</span>
+<span class="new">+         File argFile = createArgFile("cmdargs", List.of("--module-path", MODS_DIR.toString(), MODULE_OPTION, "--hello"));</span>
+<span class="new">+         env.put(JDK_JAVA_OPTIONS, "@cmdargs");</span>
+<span class="new">+         tr = doExec(env, javaCmd);</span>
+<span class="new">+         tr.checkNegative();</span>
+<span class="new">+         tr.contains("Error: Option " + MODULE_OPTION + " in @cmdargs is not allowed in environment variable JDK_JAVA_OPTIONS");</span>
+<span class="new">+         if (!tr.testStatus) {</span>
+<span class="new">+             System.out.println(tr);</span>
+<span class="new">+             throw new RuntimeException("test fails");</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         // check that specifying --module and --module-path with file works</span>
+<span class="new">+         tr = doExec(javaCmd, "-Dfile.encoding=UTF-8", "\"@cmdargs\"");</span>
+<span class="new">+         tr.contains("[--hello]");</span>
+<span class="new">+         if (!tr.testStatus) {</span>
+<span class="new">+             System.out.println(tr);</span>
+<span class="new">+             throw new RuntimeException("test fails");</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         // check with reversed --module-path and --module in the arguments file, this will fail, --module= is terminating</span>
+<span class="new">+         File argFile1 = createArgFile("cmdargs1", List.of(MODULE_OPTION, "--module-path", MODS_DIR.toString(), "--hello"));</span>
+<span class="new">+         tr = doExec(javaCmd, "-Dfile.encoding=UTF-8", "\"@cmdargs1\"");</span>
+<span class="new">+         tr.checkNegative();</span>
+<span class="new">+         if (!tr.testStatus) {</span>
+<span class="new">+             System.out.println(tr);</span>
+<span class="new">+             throw new RuntimeException("test fails");</span>
+<span class="new">+         }</span>
+<span class="new">+ </span>
+<span class="new">+         // clean-up</span>
+<span class="new">+         argFile.delete();</span>
+<span class="new">+         argFile1.delete();</span>
+<span class="new">+         recursiveDelete(testModuleDir);</span>
+<span class="new">+     }</span>
+<span class="new">+ </span>
+      public static void main(String... args) throws Exception {
+          init();
+          ArgsEnvVar a = new ArgsEnvVar();
+          a.run(args);
+          if (testExitValue &gt; 0) {
+</pre>
+<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestSpecialArgs.java.cdiff.html' target='_top'>next &gt</a></center>
+</body></html>
+

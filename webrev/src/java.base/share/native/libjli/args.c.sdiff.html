@@ -131,6 +131,49 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  151       |    [#]       ^               |[#]                 ^     |            |
  152       |   +----------+               |                [\\]|     |[^\n\r]     |
 
+</pre><hr></hr><pre>
+ 432         checkArg(arg);
+ 433         return NULL;
+ 434     }
+ 435 
+ 436     arg++;
+ 437     if (arg[0] == '@') {
+ 438         // escaped @argument
+ 439         rv = JLI_List_new(1);
+ 440         checkArg(arg);
+ 441         JLI_List_add(rv, JLI_StringDup(arg));
+ 442     } else {
+ 443         rv = expandArgFile(arg);
+ 444     }
+ 445     return rv;
+ 446 }
+ 447 
+ 448 int isTerminalOpt(char *arg) {
+ 449     return JLI_StrCmp(arg, "-jar") == 0 ||
+ 450            JLI_StrCmp(arg, "-m") == 0 ||
+ 451            JLI_StrCmp(arg, "--module") == 0 ||
+
+ 452            JLI_StrCmp(arg, "--dry-run") == 0 ||
+ 453            JLI_StrCmp(arg, "-h") == 0 ||
+ 454            JLI_StrCmp(arg, "-?") == 0 ||
+ 455            JLI_StrCmp(arg, "-help") == 0 ||
+ 456            JLI_StrCmp(arg, "--help") == 0 ||
+ 457            JLI_StrCmp(arg, "-X") == 0 ||
+ 458            JLI_StrCmp(arg, "--help-extra") == 0 ||
+ 459            JLI_StrCmp(arg, "-version") == 0 ||
+ 460            JLI_StrCmp(arg, "--version") == 0 ||
+ 461            JLI_StrCmp(arg, "-fullversion") == 0 ||
+ 462            JLI_StrCmp(arg, "--full-version") == 0;
+ 463 }
+ 464 
+ 465 JNIEXPORT jboolean JNICALL
+ 466 JLI_AddArgsFromEnvVar(JLI_List args, const char *var_name) {
+ 467     char *env = getenv(var_name);
+ 468 
+ 469     if (firstAppArgIndex == 0) {
+ 470         // Not 'java', return
+ 471         return JNI_FALSE;
+
 </pre><hr></hr>
 </pre></td><td><pre>
 
@@ -177,6 +220,49 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  152       |         +------------+       |                +------------+         |
  153       |    [#]       ^               |[#]                 ^     |            |
  154       |   +----------+               |                [\\]|     |[^\n\r]     |
+
+</pre><hr></hr><pre>
+ 434         checkArg(arg);
+ 435         return NULL;
+ 436     }
+ 437 
+ 438     arg++;
+ 439     if (arg[0] == '@') {
+ 440         // escaped @argument
+ 441         rv = JLI_List_new(1);
+ 442         checkArg(arg);
+ 443         JLI_List_add(rv, JLI_StringDup(arg));
+ 444     } else {
+ 445         rv = expandArgFile(arg);
+ 446     }
+ 447     return rv;
+ 448 }
+ 449 
+ 450 int isTerminalOpt(char *arg) {
+ 451     return JLI_StrCmp(arg, "-jar") == 0 ||
+ 452            JLI_StrCmp(arg, "-m") == 0 ||
+ 453            JLI_StrCmp(arg, "--module") == 0 ||
+<span class="new"> 454            JLI_StrCCmp(arg, "--module=") == 0 ||</span>
+ 455            JLI_StrCmp(arg, "--dry-run") == 0 ||
+ 456            JLI_StrCmp(arg, "-h") == 0 ||
+ 457            JLI_StrCmp(arg, "-?") == 0 ||
+ 458            JLI_StrCmp(arg, "-help") == 0 ||
+ 459            JLI_StrCmp(arg, "--help") == 0 ||
+ 460            JLI_StrCmp(arg, "-X") == 0 ||
+ 461            JLI_StrCmp(arg, "--help-extra") == 0 ||
+ 462            JLI_StrCmp(arg, "-version") == 0 ||
+ 463            JLI_StrCmp(arg, "--version") == 0 ||
+ 464            JLI_StrCmp(arg, "-fullversion") == 0 ||
+ 465            JLI_StrCmp(arg, "--full-version") == 0;
+ 466 }
+ 467 
+ 468 JNIEXPORT jboolean JNICALL
+ 469 JLI_AddArgsFromEnvVar(JLI_List args, const char *var_name) {
+ 470     char *env = getenv(var_name);
+ 471 
+ 472     if (firstAppArgIndex == 0) {
+ 473         // Not 'java', return
+ 474         return JNI_FALSE;
 
 </pre><hr></hr>
 </pre></td>

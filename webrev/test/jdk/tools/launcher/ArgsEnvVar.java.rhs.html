@@ -1,0 +1,519 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+    <script type="text/javascript" src="../../../../ancnav.js"></script>
+    </head>
+    <body id="SUNWwebrev" onkeypress="keypress(event);">
+    <a name="0"></a>
+    <pre></pre><hr></hr>
+<pre>
+   1 /*
+   2  * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 /**
+  25  * @test
+  26  * @bug 8170832 8180447
+  27  * @summary Arguments passed in environment variable
+  28  * @modules jdk.compiler
+  29  *          jdk.zipfs
+  30  * @build TestHelper
+  31  * @run main ArgsEnvVar
+  32  */
+  33 import java.io.File;
+  34 import java.io.IOException;
+  35 import java.util.ArrayList;
+  36 import java.util.HashMap;
+  37 import java.util.List;
+  38 import java.util.Map;
+  39 import java.util.regex.Pattern;
+<a name="1" id="anc1"></a><span class="new">  40 import java.nio.file.Paths;</span>
+<span class="new">  41 import java.nio.file.Path;</span>
+  42 
+  43 public class ArgsEnvVar extends TestHelper {
+  44     private static File testJar = null;
+  45     private static Map&lt;String, String&gt; env = new HashMap&lt;&gt;();
+  46 
+  47     private static String JDK_JAVA_OPTIONS = "JDK_JAVA_OPTIONS";
+  48 
+  49     static void init() throws IOException {
+  50         if  (testJar != null) {
+  51             return;
+  52         }
+  53         testJar = new File("test.jar");
+  54         StringBuilder tsrc = new StringBuilder();
+  55         tsrc.append("public static void main(String... args) {\n");
+  56         tsrc.append("   for (String x : args) {\n");
+  57         tsrc.append("        System.out.println(x);\n");
+  58         tsrc.append("   }\n");
+  59         tsrc.append("}\n");
+  60         createJar(testJar, new File("Foo"), tsrc.toString());
+  61 
+  62         env.put(JLDEBUG_KEY, "true");
+  63     }
+  64 
+  65     private File createArgFile(String fname, List&lt;String&gt; lines) throws IOException {
+  66         File argFile = new File(fname);
+  67         argFile.delete();
+  68         createAFile(argFile, lines);
+  69         return argFile;
+  70     }
+  71 
+  72     private void verifyOptions(List&lt;String&gt; args, TestResult tr) {
+  73         if (args.isEmpty()) {
+  74             return;
+  75         }
+  76 
+  77         int i = 1;
+  78         for (String x : args) {
+  79             tr.matches(".*argv\\[" + i + "\\] = " + Pattern.quote(x) + ".*");
+  80             i++;
+  81         }
+  82         if (! tr.testStatus) {
+  83             System.out.println(tr);
+  84             throw new RuntimeException("test fails");
+  85         }
+  86     }
+  87 
+  88     private void verifyUserArgs(List&lt;String&gt; args, TestResult tr, int index) {
+  89         if (javaCmd != TestHelper.javaCmd) {
+  90             tr.contains("\tFirst application arg index: 1");
+  91         } else {
+  92             tr.contains("\tFirst application arg index: " + index);
+  93 
+  94             for (String arg: args) {
+  95                 tr.matches("^" + Pattern.quote(arg) + "$");
+  96             }
+  97         }
+  98 
+  99         if (! tr.testStatus) {
+ 100             System.out.println(tr);
+ 101             throw new RuntimeException("test fails");
+ 102         }
+ 103     }
+ 104 
+ 105     @Test
+ 106     // Verify prepend and @argfile expansion
+ 107     public void basic() throws IOException {
+ 108         File argFile1 = createArgFile("argFile1", List.of("-Xmx32m"));
+ 109         File argFile2 = createArgFile("argFile2", List.of("-Darg.file2=TWO"));
+ 110         File argFile3 = createArgFile("argFile3", List.of("-Darg.file3=THREE"));
+ 111 
+ 112         env.put(JDK_JAVA_OPTIONS, "@argFile1\n-Xint\r-cp @@escaped\t@argFile2");
+ 113 
+ 114         TestResult tr = doExec(env, javaCmd, "@argFile3", "-cp", "test.jar", "Foo", "uarg1", "@uarg2");
+ 115 
+ 116         List&lt;String&gt; appArgs = new ArrayList&lt;&gt;();
+ 117         appArgs.add("uarg1");
+ 118         appArgs.add("@uarg2");
+ 119 
+ 120         List&lt;String&gt; options = new ArrayList&lt;&gt;();
+ 121         options.add("-Xmx32m");
+ 122         options.add("-Xint");
+ 123         options.add("-cp");
+ 124         options.add("@escaped");
+ 125         options.add("-Darg.file2=TWO");
+ 126         options.add("-Darg.file3=THREE");
+ 127         options.add("-cp");
+ 128         options.add("test.jar");
+ 129         options.add("Foo");
+ 130         options.addAll(appArgs);
+ 131 
+ 132         verifyOptions(options, tr);
+ 133         verifyUserArgs(appArgs, tr, 10);
+ 134         argFile1.delete();
+ 135         argFile2.delete();
+ 136         argFile3.delete();
+ 137     }
+ 138 
+ 139     private TestResult testInEnv(List&lt;String&gt; options) {
+ 140         env.put(JDK_JAVA_OPTIONS, String.join(" ", options));
+ 141         return doExec(env, javaCmd, "-jar", "test.jar");
+ 142     }
+ 143 
+ 144     private TestResult testInEnvAsArgFile(List&lt;String&gt; options) throws IOException {
+ 145         File argFile = createArgFile("argFile", options);
+ 146         env.put(JDK_JAVA_OPTIONS, "@argFile");
+ 147         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 148         argFile.delete();
+ 149         return tr;
+ 150     }
+ 151 
+ 152     @Test
+ 153     public void noTerminalOpt() throws IOException {
+ 154         List&lt;List&lt;String&gt;&gt; terminal_opts = List.of(
+ 155                 List.of("-jar", "test.jar"),
+ 156                 List.of("-m", "test/Foo"),
+ 157                 List.of("--module", "test/Foo"),
+<a name="2" id="anc2"></a><span class="new"> 158                 List.of("--module=test/Foo"),</span>
+ 159                 List.of("--dry-run"),
+ 160                 List.of("-h"),
+ 161                 List.of("-?"),
+ 162                 List.of("-help"),
+ 163                 List.of("--help"),
+ 164                 List.of("-X"),
+ 165                 List.of("--help-extra"),
+ 166                 List.of("-version"),
+ 167                 List.of("--version"),
+ 168                 List.of("-fullversion"),
+ 169                 List.of("--full-version"));
+ 170 
+ 171         for (List&lt;String&gt; options: terminal_opts) {
+ 172             // terminal opt in environment variable
+ 173             TestResult tr = testInEnv(options);
+ 174             tr.checkNegative();
+ 175             if (!tr.testStatus) {
+ 176                 System.out.println(tr);
+ 177                 throw new RuntimeException("test fails");
+ 178             }
+ 179 
+ 180             // terminal opt in environment variable through @file
+ 181             tr = testInEnvAsArgFile(options);
+ 182             tr.checkNegative();
+ 183             if (!tr.testStatus) {
+ 184                 System.out.println(tr);
+ 185                 throw new RuntimeException("test fails");
+ 186             }
+ 187         }
+ 188     }
+ 189 
+ 190     @Test
+ 191     public void quote() throws IOException {
+ 192         File argFile1 = createArgFile("arg File 1", List.of("-Xint"));
+ 193         File argFile2 = createArgFile("arg File 2", List.of("-Dprop='value with spaces'"));
+ 194         File argFile3 = createArgFile("arg File 3", List.of("-Xmx32m"));
+ 195         env.put(JDK_JAVA_OPTIONS, "'@arg File 1' @\"arg File 2\" @'arg File'\" 3\"");
+ 196 
+ 197         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 198         List&lt;String&gt; options = new ArrayList&lt;&gt;();
+ 199         options.add("-Xint");
+ 200         options.add("-Dprop=value with spaces");
+ 201         options.add("-Xmx32m");
+ 202         options.add("-jar");
+ 203         options.add("test.jar");
+ 204         verifyOptions(options, tr);
+ 205         argFile1.delete();
+ 206         argFile2.delete();
+ 207         argFile3.delete();
+ 208     }
+ 209 
+ 210     @Test
+ 211     public void openQuoteShouldFail() {
+ 212         env.put(JDK_JAVA_OPTIONS, "-Dprop='value missing close quote");
+ 213         TestResult tr = doExec(env, javaCmd, "-version");
+ 214         tr.checkNegative();
+ 215         if (!tr.testStatus) {
+ 216             System.out.println(tr);
+ 217             throw new RuntimeException("test fails");
+ 218         }
+ 219     }
+ 220 
+ 221     @Test
+ 222     public void noWildcard() {
+ 223         env.put(JDK_JAVA_OPTIONS, "-cp *");
+ 224         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 225         verifyOptions(List.of("-cp", "*", "-jar", "test.jar"), tr);
+ 226 
+ 227         env.put(JDK_JAVA_OPTIONS, "-p ?");
+ 228         tr = doExec(env, javaCmd, "-jar", "test.jar", "one", "two");
+ 229         verifyOptions(List.of("-p", "?", "-jar", "test.jar", "one", "two"), tr);
+ 230     }
+ 231 
+ 232     @Test
+ 233     public void testTrailingSpaces() {
+ 234         env.put(JDK_JAVA_OPTIONS, "--add-exports java.base/jdk.internal.misc=ALL-UNNAMED ");
+ 235         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 236         verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
+ 237 
+ 238         env.put(JDK_JAVA_OPTIONS, "--class-path ' '");
+ 239         tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 240         verifyOptions(List.of("--class-path", " ", "-jar", "test.jar"), tr);
+ 241 
+ 242         env.put(JDK_JAVA_OPTIONS, "  --add-exports java.base/jdk.internal.misc=ALL-UNNAMED ");
+ 243         tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 244         verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
+<a name="3" id="anc3"></a><span class="new"> 245     }</span>
+<span class="new"> 246 </span>
+<span class="new"> 247     /**</span>
+<span class="new"> 248      * Helper method to initialize a simple module that just prints the passed in arguments</span>
+<span class="new"> 249      */</span>
+<span class="new"> 250     private void initModulesDir(File modulesDir) throws IOException {</span>
+<span class="new"> 251         if (modulesDir.exists()) {</span>
+<span class="new"> 252             recursiveDelete(modulesDir);</span>
+<span class="new"> 253         }</span>
+<span class="new"> 254 </span>
+<span class="new"> 255         modulesDir.mkdirs();</span>
+<span class="new"> 256 </span>
+<span class="new"> 257         File srcDir = new File(modulesDir, "src");</span>
+<span class="new"> 258         File modsDir = new File(modulesDir, "mods");</span>
+<span class="new"> 259         File testDir = new File(srcDir, "test");</span>
+<span class="new"> 260         File launcherTestDir = new File(testDir, "launcher");</span>
+<span class="new"> 261         srcDir.mkdir();</span>
+<span class="new"> 262         modsDir.mkdir();</span>
+<span class="new"> 263         testDir.mkdir();</span>
+<span class="new"> 264         launcherTestDir.mkdir();</span>
+<span class="new"> 265 </span>
+<span class="new"> 266         ArrayList&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();</span>
+<span class="new"> 267         scratchpad.add("module test {}");</span>
+<span class="new"> 268         createFile(new File(testDir, "module-info.java"), scratchpad);</span>
+<span class="new"> 269         scratchpad.clear();</span>
+<span class="new"> 270         scratchpad.add("package launcher;");</span>
+<span class="new"> 271         scratchpad.add("import java.util.Arrays;");</span>
+<span class="new"> 272         scratchpad.add("public class Main {");</span>
+<span class="new"> 273         scratchpad.add("public static void main(String[] args) {");</span>
+<span class="new"> 274         scratchpad.add("System.out.println(Arrays.toString(args));");</span>
+<span class="new"> 275         scratchpad.add("}");</span>
+<span class="new"> 276         scratchpad.add("}");</span>
+<span class="new"> 277         createFile(new File(launcherTestDir, "Main.java"), scratchpad);</span>
+<span class="new"> 278     }</span>
+<span class="new"> 279 </span>
+<span class="new"> 280     @Test</span>
+<span class="new"> 281     // That that we can correctly handle the module longform argument option</span>
+<span class="new"> 282     // when supplied in an argument file</span>
+<span class="new"> 283     public void modulesInArgsFile() throws IOException {</span>
+<span class="new"> 284         File cwd = new File(".");</span>
+<span class="new"> 285         File testModuleDir = new File(cwd, "modules_test");</span>
+<span class="new"> 286 </span>
+<span class="new"> 287         initModulesDir(testModuleDir);</span>
+<span class="new"> 288 </span>
+<span class="new"> 289         Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");</span>
+<span class="new"> 290         Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");</span>
+<span class="new"> 291 </span>
+<span class="new"> 292         // test module / main class</span>
+<span class="new"> 293         String MODULE_OPTION = "--module=test/launcher.Main";</span>
+<span class="new"> 294         String TEST_MODULE = "test";</span>
+<span class="new"> 295 </span>
+<span class="new"> 296         // javac -d mods/test src/test/**</span>
+<span class="new"> 297         TestResult tr = doExec(</span>
+<span class="new"> 298             javacCmd,</span>
+<span class="new"> 299             "-d", MODS_DIR.toString(),</span>
+<span class="new"> 300             "--module-source-path", SRC_DIR.toString(),</span>
+<span class="new"> 301             "--module", TEST_MODULE);</span>
+<span class="new"> 302 </span>
+<span class="new"> 303         if (!tr.isOK()) {</span>
+<span class="new"> 304             System.out.println("test did not compile");</span>
+<span class="new"> 305             throw new RuntimeException("Error: modules test did not compile");</span>
+<span class="new"> 306         }</span>
+<span class="new"> 307 </span>
+<span class="new"> 308         // verify the terminating ability of --module= through environment variables</span>
+<span class="new"> 309         File argFile = createArgFile("cmdargs", List.of("--module-path", MODS_DIR.toString(), MODULE_OPTION, "--hello"));</span>
+<span class="new"> 310         env.put(JDK_JAVA_OPTIONS, "@cmdargs");</span>
+<span class="new"> 311         tr = doExec(env, javaCmd);</span>
+<span class="new"> 312         tr.checkNegative();</span>
+<span class="new"> 313         tr.contains("Error: Option " + MODULE_OPTION + " in @cmdargs is not allowed in environment variable JDK_JAVA_OPTIONS");</span>
+<span class="new"> 314         if (!tr.testStatus) {</span>
+<span class="new"> 315             System.out.println(tr);</span>
+<span class="new"> 316             throw new RuntimeException("test fails");</span>
+<span class="new"> 317         }</span>
+<span class="new"> 318 </span>
+<span class="new"> 319         // check that specifying --module and --module-path with file works</span>
+<span class="new"> 320         tr = doExec(javaCmd, "-Dfile.encoding=UTF-8", "\"@cmdargs\"");</span>
+<span class="new"> 321         tr.contains("[--hello]");</span>
+<span class="new"> 322         if (!tr.testStatus) {</span>
+<span class="new"> 323             System.out.println(tr);</span>
+<span class="new"> 324             throw new RuntimeException("test fails");</span>
+<span class="new"> 325         }</span>
+<span class="new"> 326 </span>
+<span class="new"> 327         // check with reversed --module-path and --module in the arguments file, this will fail, --module= is terminating</span>
+<span class="new"> 328         File argFile1 = createArgFile("cmdargs1", List.of(MODULE_OPTION, "--module-path", MODS_DIR.toString(), "--hello"));</span>
+<span class="new"> 329         tr = doExec(javaCmd, "-Dfile.encoding=UTF-8", "\"@cmdargs1\"");</span>
+<span class="new"> 330         tr.checkNegative();</span>
+<span class="new"> 331         if (!tr.testStatus) {</span>
+<span class="new"> 332             System.out.println(tr);</span>
+<span class="new"> 333             throw new RuntimeException("test fails");</span>
+<span class="new"> 334         }</span>
+<span class="new"> 335 </span>
+<span class="new"> 336         // clean-up</span>
+<span class="new"> 337         argFile.delete();</span>
+<span class="new"> 338         argFile1.delete();</span>
+<span class="new"> 339         recursiveDelete(testModuleDir);</span>
+ 340     }
+ 341 
+ 342     public static void main(String... args) throws Exception {
+ 343         init();
+ 344         ArgsEnvVar a = new ArgsEnvVar();
+ 345         a.run(args);
+ 346         if (testExitValue &gt; 0) {
+ 347             System.out.println("Total of " + testExitValue + " failed");
+ 348             System.exit(1);
+ 349         } else {
+ 350             System.out.println("All tests pass");
+ 351         }
+ 352     }
+ 353 }
+<a name="4" id="anc4"></a><b style="font-size: large; color: red">--- EOF ---</b>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre><form name="eof"><input name="value" value="4" type="hidden" /></form></body></html>

@@ -1,0 +1,519 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+    <script type="text/javascript" src="../../../../ancnav.js"></script>
+    </head>
+    <body id="SUNWwebrev" onkeypress="keypress(event);">
+    <a name="0"></a>
+    <pre></pre><hr></hr>
+<pre>
+   1 /*
+   2  * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 /**
+  25  * @test
+  26  * @bug 8170832 8180447
+  27  * @summary Arguments passed in environment variable
+  28  * @modules jdk.compiler
+  29  *          jdk.zipfs
+  30  * @build TestHelper
+  31  * @run main ArgsEnvVar
+  32  */
+  33 import java.io.File;
+  34 import java.io.IOException;
+  35 import java.util.ArrayList;
+  36 import java.util.HashMap;
+  37 import java.util.List;
+  38 import java.util.Map;
+  39 import java.util.regex.Pattern;
+<a name="1" id="anc1"></a>
+
+  40 
+  41 public class ArgsEnvVar extends TestHelper {
+  42     private static File testJar = null;
+  43     private static Map&lt;String, String&gt; env = new HashMap&lt;&gt;();
+  44 
+  45     private static String JDK_JAVA_OPTIONS = "JDK_JAVA_OPTIONS";
+  46 
+  47     static void init() throws IOException {
+  48         if  (testJar != null) {
+  49             return;
+  50         }
+  51         testJar = new File("test.jar");
+  52         StringBuilder tsrc = new StringBuilder();
+  53         tsrc.append("public static void main(String... args) {\n");
+  54         tsrc.append("   for (String x : args) {\n");
+  55         tsrc.append("        System.out.println(x);\n");
+  56         tsrc.append("   }\n");
+  57         tsrc.append("}\n");
+  58         createJar(testJar, new File("Foo"), tsrc.toString());
+  59 
+  60         env.put(JLDEBUG_KEY, "true");
+  61     }
+  62 
+  63     private File createArgFile(String fname, List&lt;String&gt; lines) throws IOException {
+  64         File argFile = new File(fname);
+  65         argFile.delete();
+  66         createAFile(argFile, lines);
+  67         return argFile;
+  68     }
+  69 
+  70     private void verifyOptions(List&lt;String&gt; args, TestResult tr) {
+  71         if (args.isEmpty()) {
+  72             return;
+  73         }
+  74 
+  75         int i = 1;
+  76         for (String x : args) {
+  77             tr.matches(".*argv\\[" + i + "\\] = " + Pattern.quote(x) + ".*");
+  78             i++;
+  79         }
+  80         if (! tr.testStatus) {
+  81             System.out.println(tr);
+  82             throw new RuntimeException("test fails");
+  83         }
+  84     }
+  85 
+  86     private void verifyUserArgs(List&lt;String&gt; args, TestResult tr, int index) {
+  87         if (javaCmd != TestHelper.javaCmd) {
+  88             tr.contains("\tFirst application arg index: 1");
+  89         } else {
+  90             tr.contains("\tFirst application arg index: " + index);
+  91 
+  92             for (String arg: args) {
+  93                 tr.matches("^" + Pattern.quote(arg) + "$");
+  94             }
+  95         }
+  96 
+  97         if (! tr.testStatus) {
+  98             System.out.println(tr);
+  99             throw new RuntimeException("test fails");
+ 100         }
+ 101     }
+ 102 
+ 103     @Test
+ 104     // Verify prepend and @argfile expansion
+ 105     public void basic() throws IOException {
+ 106         File argFile1 = createArgFile("argFile1", List.of("-Xmx32m"));
+ 107         File argFile2 = createArgFile("argFile2", List.of("-Darg.file2=TWO"));
+ 108         File argFile3 = createArgFile("argFile3", List.of("-Darg.file3=THREE"));
+ 109 
+ 110         env.put(JDK_JAVA_OPTIONS, "@argFile1\n-Xint\r-cp @@escaped\t@argFile2");
+ 111 
+ 112         TestResult tr = doExec(env, javaCmd, "@argFile3", "-cp", "test.jar", "Foo", "uarg1", "@uarg2");
+ 113 
+ 114         List&lt;String&gt; appArgs = new ArrayList&lt;&gt;();
+ 115         appArgs.add("uarg1");
+ 116         appArgs.add("@uarg2");
+ 117 
+ 118         List&lt;String&gt; options = new ArrayList&lt;&gt;();
+ 119         options.add("-Xmx32m");
+ 120         options.add("-Xint");
+ 121         options.add("-cp");
+ 122         options.add("@escaped");
+ 123         options.add("-Darg.file2=TWO");
+ 124         options.add("-Darg.file3=THREE");
+ 125         options.add("-cp");
+ 126         options.add("test.jar");
+ 127         options.add("Foo");
+ 128         options.addAll(appArgs);
+ 129 
+ 130         verifyOptions(options, tr);
+ 131         verifyUserArgs(appArgs, tr, 10);
+ 132         argFile1.delete();
+ 133         argFile2.delete();
+ 134         argFile3.delete();
+ 135     }
+ 136 
+ 137     private TestResult testInEnv(List&lt;String&gt; options) {
+ 138         env.put(JDK_JAVA_OPTIONS, String.join(" ", options));
+ 139         return doExec(env, javaCmd, "-jar", "test.jar");
+ 140     }
+ 141 
+ 142     private TestResult testInEnvAsArgFile(List&lt;String&gt; options) throws IOException {
+ 143         File argFile = createArgFile("argFile", options);
+ 144         env.put(JDK_JAVA_OPTIONS, "@argFile");
+ 145         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 146         argFile.delete();
+ 147         return tr;
+ 148     }
+ 149 
+ 150     @Test
+ 151     public void noTerminalOpt() throws IOException {
+ 152         List&lt;List&lt;String&gt;&gt; terminal_opts = List.of(
+ 153                 List.of("-jar", "test.jar"),
+ 154                 List.of("-m", "test/Foo"),
+ 155                 List.of("--module", "test/Foo"),
+<a name="2" id="anc2"></a>
+ 156                 List.of("--dry-run"),
+ 157                 List.of("-h"),
+ 158                 List.of("-?"),
+ 159                 List.of("-help"),
+ 160                 List.of("--help"),
+ 161                 List.of("-X"),
+ 162                 List.of("--help-extra"),
+ 163                 List.of("-version"),
+ 164                 List.of("--version"),
+ 165                 List.of("-fullversion"),
+ 166                 List.of("--full-version"));
+ 167 
+ 168         for (List&lt;String&gt; options: terminal_opts) {
+ 169             // terminal opt in environment variable
+ 170             TestResult tr = testInEnv(options);
+ 171             tr.checkNegative();
+ 172             if (!tr.testStatus) {
+ 173                 System.out.println(tr);
+ 174                 throw new RuntimeException("test fails");
+ 175             }
+ 176 
+ 177             // terminal opt in environment variable through @file
+ 178             tr = testInEnvAsArgFile(options);
+ 179             tr.checkNegative();
+ 180             if (!tr.testStatus) {
+ 181                 System.out.println(tr);
+ 182                 throw new RuntimeException("test fails");
+ 183             }
+ 184         }
+ 185     }
+ 186 
+ 187     @Test
+ 188     public void quote() throws IOException {
+ 189         File argFile1 = createArgFile("arg File 1", List.of("-Xint"));
+ 190         File argFile2 = createArgFile("arg File 2", List.of("-Dprop='value with spaces'"));
+ 191         File argFile3 = createArgFile("arg File 3", List.of("-Xmx32m"));
+ 192         env.put(JDK_JAVA_OPTIONS, "'@arg File 1' @\"arg File 2\" @'arg File'\" 3\"");
+ 193 
+ 194         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 195         List&lt;String&gt; options = new ArrayList&lt;&gt;();
+ 196         options.add("-Xint");
+ 197         options.add("-Dprop=value with spaces");
+ 198         options.add("-Xmx32m");
+ 199         options.add("-jar");
+ 200         options.add("test.jar");
+ 201         verifyOptions(options, tr);
+ 202         argFile1.delete();
+ 203         argFile2.delete();
+ 204         argFile3.delete();
+ 205     }
+ 206 
+ 207     @Test
+ 208     public void openQuoteShouldFail() {
+ 209         env.put(JDK_JAVA_OPTIONS, "-Dprop='value missing close quote");
+ 210         TestResult tr = doExec(env, javaCmd, "-version");
+ 211         tr.checkNegative();
+ 212         if (!tr.testStatus) {
+ 213             System.out.println(tr);
+ 214             throw new RuntimeException("test fails");
+ 215         }
+ 216     }
+ 217 
+ 218     @Test
+ 219     public void noWildcard() {
+ 220         env.put(JDK_JAVA_OPTIONS, "-cp *");
+ 221         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 222         verifyOptions(List.of("-cp", "*", "-jar", "test.jar"), tr);
+ 223 
+ 224         env.put(JDK_JAVA_OPTIONS, "-p ?");
+ 225         tr = doExec(env, javaCmd, "-jar", "test.jar", "one", "two");
+ 226         verifyOptions(List.of("-p", "?", "-jar", "test.jar", "one", "two"), tr);
+ 227     }
+ 228 
+ 229     @Test
+ 230     public void testTrailingSpaces() {
+ 231         env.put(JDK_JAVA_OPTIONS, "--add-exports java.base/jdk.internal.misc=ALL-UNNAMED ");
+ 232         TestResult tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 233         verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
+ 234 
+ 235         env.put(JDK_JAVA_OPTIONS, "--class-path ' '");
+ 236         tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 237         verifyOptions(List.of("--class-path", " ", "-jar", "test.jar"), tr);
+ 238 
+ 239         env.put(JDK_JAVA_OPTIONS, "  --add-exports java.base/jdk.internal.misc=ALL-UNNAMED ");
+ 240         tr = doExec(env, javaCmd, "-jar", "test.jar");
+ 241         verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
+<a name="3" id="anc3"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 242     }
+ 243 
+ 244     public static void main(String... args) throws Exception {
+ 245         init();
+ 246         ArgsEnvVar a = new ArgsEnvVar();
+ 247         a.run(args);
+ 248         if (testExitValue &gt; 0) {
+ 249             System.out.println("Total of " + testExitValue + " failed");
+ 250             System.exit(1);
+ 251         } else {
+ 252             System.out.println("All tests pass");
+ 253         }
+ 254     }
+ 255 }
+<a name="4" id="anc4"></a><b style="font-size: large; color: red">--- EOF ---</b>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre><form name="eof"><input name="value" value="4" type="hidden" /></form></body></html>

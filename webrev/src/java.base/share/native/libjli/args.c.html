@@ -533,263 +533,264 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
  451     return JLI_StrCmp(arg, "-jar") == 0 ||
  452            JLI_StrCmp(arg, "-m") == 0 ||
  453            JLI_StrCmp(arg, "--module") == 0 ||
- 454            JLI_StrCmp(arg, "--dry-run") == 0 ||
- 455            JLI_StrCmp(arg, "-h") == 0 ||
- 456            JLI_StrCmp(arg, "-?") == 0 ||
- 457            JLI_StrCmp(arg, "-help") == 0 ||
- 458            JLI_StrCmp(arg, "--help") == 0 ||
- 459            JLI_StrCmp(arg, "-X") == 0 ||
- 460            JLI_StrCmp(arg, "--help-extra") == 0 ||
- 461            JLI_StrCmp(arg, "-version") == 0 ||
- 462            JLI_StrCmp(arg, "--version") == 0 ||
- 463            JLI_StrCmp(arg, "-fullversion") == 0 ||
- 464            JLI_StrCmp(arg, "--full-version") == 0;
- 465 }
- 466 
- 467 JNIEXPORT jboolean JNICALL
- 468 JLI_AddArgsFromEnvVar(JLI_List args, const char *var_name) {
- 469     char *env = getenv(var_name);
- 470 
- 471     if (firstAppArgIndex == 0) {
- 472         // Not 'java', return
- 473         return JNI_FALSE;
- 474     }
- 475 
- 476     if (relaunch) {
- 477         return JNI_FALSE;
- 478     }
- 479 
- 480     if (NULL == env) {
- 481         return JNI_FALSE;
- 482     }
- 483 
- 484     JLI_ReportMessage(ARG_INFO_ENVVAR, var_name, env);
- 485     return expand(args, env, var_name);
- 486 }
- 487 
- 488 /*
- 489  * Expand a string into a list of args.
- 490  * If the string is the result of looking up an environment variable,
- 491  * var_name should be set to the name of that environment variable,
- 492  * for use if needed in error messages.
- 493  */
- 494 
- 495 static jboolean expand(JLI_List args, const char *str, const char *var_name) {
- 496     jboolean inEnvVar = (var_name != NULL);
- 497 
- 498     char *p, *arg;
- 499     char quote;
- 500     JLI_List argsInFile;
- 501 
- 502     // This is retained until the process terminates as it is saved as the args
- 503     p = JLI_MemAlloc(JLI_StrLen(str) + 1);
- 504     while (*str != '\0') {
- 505         while (*str != '\0' &amp;&amp; isspace(*str)) {
- 506             str++;
- 507         }
- 508 
- 509         // Trailing space
- 510         if (*str == '\0') {
- 511             break;
- 512         }
- 513 
- 514         arg = p;
- 515         while (*str != '\0' &amp;&amp; !isspace(*str)) {
- 516             if (inEnvVar &amp;&amp; (*str == '"' || *str == '\'')) {
- 517                 quote = *str++;
- 518                 while (*str != quote &amp;&amp; *str != '\0') {
- 519                     *p++ = *str++;
- 520                 }
- 521 
- 522                 if (*str == '\0') {
- 523                     JLI_ReportMessage(ARG_ERROR8, var_name);
- 524                     exit(1);
- 525                 }
- 526                 str++;
- 527             } else {
- 528                 *p++ = *str++;
- 529             }
- 530         }
- 531 
- 532         *p++ = '\0';
- 533 
- 534         argsInFile = JLI_PreprocessArg(arg, JNI_FALSE);
- 535 
- 536         if (NULL == argsInFile) {
- 537             if (isTerminalOpt(arg)) {
- 538                 if (inEnvVar) {
- 539                     JLI_ReportMessage(ARG_ERROR9, arg, var_name);
- 540                 } else {
- 541                     JLI_ReportMessage(ARG_ERROR15, arg);
- 542                 }
- 543                 exit(1);
- 544             }
- 545             JLI_List_add(args, arg);
- 546         } else {
- 547             size_t cnt, idx;
- 548             char *argFile = arg;
- 549             cnt = argsInFile-&gt;size;
- 550             for (idx = 0; idx &lt; cnt; idx++) {
- 551                 arg = argsInFile-&gt;elements[idx];
- 552                 if (isTerminalOpt(arg)) {
- 553                     if (inEnvVar) {
- 554                         JLI_ReportMessage(ARG_ERROR10, arg, argFile, var_name);
- 555                     } else {
- 556                         JLI_ReportMessage(ARG_ERROR16, arg, argFile);
- 557                     }
- 558                     exit(1);
- 559                 }
- 560                 JLI_List_add(args, arg);
- 561             }
- 562             // Shallow free, we reuse the string to avoid copy
- 563             JLI_MemFree(argsInFile-&gt;elements);
- 564             JLI_MemFree(argsInFile);
- 565         }
- 566         /*
- 567          * Check if main-class is specified after argument being checked. It
- 568          * must always appear after expansion, as a main-class could be specified
- 569          * indirectly into environment variable via an @argfile, and it must be
- 570          * caught now.
- 571          */
- 572         if (firstAppArgIndex != NOT_FOUND) {
- 573             if (inEnvVar) {
- 574                 JLI_ReportMessage(ARG_ERROR11, var_name);
- 575             } else {
- 576                 JLI_ReportMessage(ARG_ERROR17);
- 577             }
- 578             exit(1);
- 579         }
- 580 
- 581         assert (*str == '\0' || isspace(*str));
- 582     }
- 583 
- 584     return JNI_TRUE;
- 585 }
- 586 
- 587 #ifdef DEBUG_ARGFILE
- 588 /*
- 589  * Stand-alone sanity test, build with following command line
- 590  * $ CC -DDEBUG_ARGFILE -DNO_JNI -g args.c jli_util.c
- 591  */
- 592 
- 593 void fail(char *expected, char *actual, size_t idx) {
- 594     printf("FAILED: Token[%lu] expected to be &lt;%s&gt;, got &lt;%s&gt;\n", idx, expected, actual);
- 595     exit(1);
- 596 }
- 597 
- 598 void test_case(char *case_data, char **tokens, size_t cnt_tokens) {
- 599     size_t actual_cnt;
- 600     char *token;
- 601     __ctx_args ctx;
- 602 
- 603     actual_cnt = 0;
- 604 
- 605     ctx.state = FIND_NEXT;
- 606     ctx.parts = JLI_List_new(4);
- 607     ctx.cptr = case_data;
- 608     ctx.eob = case_data + strlen(case_data);
- 609 
- 610     printf("Test case: &lt;%s&gt;, expected %lu tokens.\n", case_data, cnt_tokens);
- 611 
- 612     for (token = nextToken(&amp;ctx); token != NULL; token = nextToken(&amp;ctx)) {
- 613         // should not have more tokens than expected
- 614         if (actual_cnt &gt;= cnt_tokens) {
- 615             printf("FAILED: Extra token detected: &lt;%s&gt;\n", token);
- 616             exit(2);
- 617         }
- 618         if (JLI_StrCmp(token, tokens[actual_cnt]) != 0) {
- 619             fail(tokens[actual_cnt], token, actual_cnt);
- 620         }
- 621         actual_cnt++;
- 622     }
- 623 
- 624     char* last = NULL;
- 625     if (ctx.parts-&gt;size != 0) {
- 626         last = JLI_List_combine(ctx.parts);
- 627     }
- 628     JLI_List_free(ctx.parts);
- 629 
- 630     if (actual_cnt &gt;= cnt_tokens) {
- 631         // same number of tokens, should have nothing left to parse
- 632         if (last != NULL) {
- 633             if (*last != '#') {
- 634                 printf("Leftover detected: %s", last);
- 635                 exit(2);
- 636             }
- 637         }
- 638     } else {
- 639         if (JLI_StrCmp(last, tokens[actual_cnt]) != 0) {
- 640             fail(tokens[actual_cnt], last, actual_cnt);
- 641         }
- 642         actual_cnt++;
- 643     }
- 644     if (actual_cnt != cnt_tokens) {
- 645         printf("FAILED: Number of tokens not match, expected %lu, got %lu\n",
- 646             cnt_tokens, actual_cnt);
- 647         exit(3);
- 648     }
- 649 
- 650     printf("PASS\n");
- 651 }
- 652 
- 653 #define DO_CASE(name) \
- 654     test_case(name[0], name + 1, sizeof(name)/sizeof(char*) - 1)
- 655 
- 656 int main(int argc, char** argv) {
- 657     size_t i, j;
- 658 
- 659     char* case1[] = { "-version -cp \"c:\\\\java libs\\\\one.jar\" \n",
- 660         "-version", "-cp", "c:\\java libs\\one.jar" };
- 661     DO_CASE(case1);
- 662 
- 663     // note the open quote at the end
- 664     char* case2[] = { "com.foo.Panda \"Furious 5\"\fand\t'Shi Fu' \"escape\tprison",
- 665         "com.foo.Panda", "Furious 5", "and", "Shi Fu", "escape\tprison"};
- 666     DO_CASE(case2);
- 667 
- 668     char* escaped_chars[] = { "escaped chars testing \"\\a\\b\\c\\f\\n\\r\\t\\v\\9\\6\\23\\82\\28\\377\\477\\278\\287\"",
- 669         "escaped", "chars", "testing", "abc\f\n\r\tv96238228377477278287"};
- 670     DO_CASE(escaped_chars);
- 671 
- 672     char* mixed_quote[]  = { "\"mix 'single quote' in double\" 'mix \"double quote\" in single' partial\"quote me\"this",
- 673         "mix 'single quote' in double", "mix \"double quote\" in single", "partialquote methis"};
- 674     DO_CASE(mixed_quote);
- 675 
- 676     char* comments[]  = { "line one #comment\n'line #2' #rest are comment\r\n#comment on line 3\nline 4 #comment to eof",
- 677         "line", "one", "line #2", "line", "4"};
- 678     DO_CASE(comments);
- 679 
- 680     char* open_quote[] = { "This is an \"open quote \n    across line\n\t, note for WS.",
- 681         "This", "is", "an", "open quote ", "across", "line", ",", "note", "for", "WS." };
- 682     DO_CASE(open_quote);
- 683 
- 684     char* escape_in_open_quote[] = { "Try \"this \\\\\\\\ escape\\n double quote \\\" in open quote",
- 685         "Try", "this \\\\ escape\n double quote \" in open quote" };
- 686     DO_CASE(escape_in_open_quote);
- 687 
- 688     char* quote[] = { "'-Dmy.quote.single'='Property in single quote. Here a double quote\" Add some slashes \\\\/'",
- 689         "-Dmy.quote.single=Property in single quote. Here a double quote\" Add some slashes \\/" };
- 690     DO_CASE(quote);
- 691 
- 692     char* multi[] = { "\"Open quote to \n  new \"line \\\n\r   third\\\n\r\\\tand\ffourth\"",
- 693         "Open quote to ", "new", "line third\tand\ffourth" };
- 694     DO_CASE(multi);
- 695 
- 696     char* escape_quote[] = { "c:\\\"partial quote\"\\lib",
- 697         "c:\\partial quote\\lib" };
- 698     DO_CASE(escape_quote);
- 699 
- 700     if (argc &gt; 1) {
- 701         for (i = 0; i &lt; argc; i++) {
- 702             JLI_List tokens = JLI_PreprocessArg(argv[i], JNI_FALSE);
- 703             if (NULL != tokens) {
- 704                 for (j = 0; j &lt; tokens-&gt;size; j++) {
- 705                     printf("Token[%lu]: &lt;%s&gt;\n", (unsigned long) j, tokens-&gt;elements[j]);
- 706                 }
- 707             }
- 708         }
- 709     }
- 710 }
- 711 
- 712 #endif // DEBUG_ARGFILE
+ 454            JLI_StrCCmp(arg, "--module=") == 0 ||
+ 455            JLI_StrCmp(arg, "--dry-run") == 0 ||
+ 456            JLI_StrCmp(arg, "-h") == 0 ||
+ 457            JLI_StrCmp(arg, "-?") == 0 ||
+ 458            JLI_StrCmp(arg, "-help") == 0 ||
+ 459            JLI_StrCmp(arg, "--help") == 0 ||
+ 460            JLI_StrCmp(arg, "-X") == 0 ||
+ 461            JLI_StrCmp(arg, "--help-extra") == 0 ||
+ 462            JLI_StrCmp(arg, "-version") == 0 ||
+ 463            JLI_StrCmp(arg, "--version") == 0 ||
+ 464            JLI_StrCmp(arg, "-fullversion") == 0 ||
+ 465            JLI_StrCmp(arg, "--full-version") == 0;
+ 466 }
+ 467 
+ 468 JNIEXPORT jboolean JNICALL
+ 469 JLI_AddArgsFromEnvVar(JLI_List args, const char *var_name) {
+ 470     char *env = getenv(var_name);
+ 471 
+ 472     if (firstAppArgIndex == 0) {
+ 473         // Not 'java', return
+ 474         return JNI_FALSE;
+ 475     }
+ 476 
+ 477     if (relaunch) {
+ 478         return JNI_FALSE;
+ 479     }
+ 480 
+ 481     if (NULL == env) {
+ 482         return JNI_FALSE;
+ 483     }
+ 484 
+ 485     JLI_ReportMessage(ARG_INFO_ENVVAR, var_name, env);
+ 486     return expand(args, env, var_name);
+ 487 }
+ 488 
+ 489 /*
+ 490  * Expand a string into a list of args.
+ 491  * If the string is the result of looking up an environment variable,
+ 492  * var_name should be set to the name of that environment variable,
+ 493  * for use if needed in error messages.
+ 494  */
+ 495 
+ 496 static jboolean expand(JLI_List args, const char *str, const char *var_name) {
+ 497     jboolean inEnvVar = (var_name != NULL);
+ 498 
+ 499     char *p, *arg;
+ 500     char quote;
+ 501     JLI_List argsInFile;
+ 502 
+ 503     // This is retained until the process terminates as it is saved as the args
+ 504     p = JLI_MemAlloc(JLI_StrLen(str) + 1);
+ 505     while (*str != '\0') {
+ 506         while (*str != '\0' &amp;&amp; isspace(*str)) {
+ 507             str++;
+ 508         }
+ 509 
+ 510         // Trailing space
+ 511         if (*str == '\0') {
+ 512             break;
+ 513         }
+ 514 
+ 515         arg = p;
+ 516         while (*str != '\0' &amp;&amp; !isspace(*str)) {
+ 517             if (inEnvVar &amp;&amp; (*str == '"' || *str == '\'')) {
+ 518                 quote = *str++;
+ 519                 while (*str != quote &amp;&amp; *str != '\0') {
+ 520                     *p++ = *str++;
+ 521                 }
+ 522 
+ 523                 if (*str == '\0') {
+ 524                     JLI_ReportMessage(ARG_ERROR8, var_name);
+ 525                     exit(1);
+ 526                 }
+ 527                 str++;
+ 528             } else {
+ 529                 *p++ = *str++;
+ 530             }
+ 531         }
+ 532 
+ 533         *p++ = '\0';
+ 534 
+ 535         argsInFile = JLI_PreprocessArg(arg, JNI_FALSE);
+ 536 
+ 537         if (NULL == argsInFile) {
+ 538             if (isTerminalOpt(arg)) {
+ 539                 if (inEnvVar) {
+ 540                     JLI_ReportMessage(ARG_ERROR9, arg, var_name);
+ 541                 } else {
+ 542                     JLI_ReportMessage(ARG_ERROR15, arg);
+ 543                 }
+ 544                 exit(1);
+ 545             }
+ 546             JLI_List_add(args, arg);
+ 547         } else {
+ 548             size_t cnt, idx;
+ 549             char *argFile = arg;
+ 550             cnt = argsInFile-&gt;size;
+ 551             for (idx = 0; idx &lt; cnt; idx++) {
+ 552                 arg = argsInFile-&gt;elements[idx];
+ 553                 if (isTerminalOpt(arg)) {
+ 554                     if (inEnvVar) {
+ 555                         JLI_ReportMessage(ARG_ERROR10, arg, argFile, var_name);
+ 556                     } else {
+ 557                         JLI_ReportMessage(ARG_ERROR16, arg, argFile);
+ 558                     }
+ 559                     exit(1);
+ 560                 }
+ 561                 JLI_List_add(args, arg);
+ 562             }
+ 563             // Shallow free, we reuse the string to avoid copy
+ 564             JLI_MemFree(argsInFile-&gt;elements);
+ 565             JLI_MemFree(argsInFile);
+ 566         }
+ 567         /*
+ 568          * Check if main-class is specified after argument being checked. It
+ 569          * must always appear after expansion, as a main-class could be specified
+ 570          * indirectly into environment variable via an @argfile, and it must be
+ 571          * caught now.
+ 572          */
+ 573         if (firstAppArgIndex != NOT_FOUND) {
+ 574             if (inEnvVar) {
+ 575                 JLI_ReportMessage(ARG_ERROR11, var_name);
+ 576             } else {
+ 577                 JLI_ReportMessage(ARG_ERROR17);
+ 578             }
+ 579             exit(1);
+ 580         }
+ 581 
+ 582         assert (*str == '\0' || isspace(*str));
+ 583     }
+ 584 
+ 585     return JNI_TRUE;
+ 586 }
+ 587 
+ 588 #ifdef DEBUG_ARGFILE
+ 589 /*
+ 590  * Stand-alone sanity test, build with following command line
+ 591  * $ CC -DDEBUG_ARGFILE -DNO_JNI -g args.c jli_util.c
+ 592  */
+ 593 
+ 594 void fail(char *expected, char *actual, size_t idx) {
+ 595     printf("FAILED: Token[%lu] expected to be &lt;%s&gt;, got &lt;%s&gt;\n", idx, expected, actual);
+ 596     exit(1);
+ 597 }
+ 598 
+ 599 void test_case(char *case_data, char **tokens, size_t cnt_tokens) {
+ 600     size_t actual_cnt;
+ 601     char *token;
+ 602     __ctx_args ctx;
+ 603 
+ 604     actual_cnt = 0;
+ 605 
+ 606     ctx.state = FIND_NEXT;
+ 607     ctx.parts = JLI_List_new(4);
+ 608     ctx.cptr = case_data;
+ 609     ctx.eob = case_data + strlen(case_data);
+ 610 
+ 611     printf("Test case: &lt;%s&gt;, expected %lu tokens.\n", case_data, cnt_tokens);
+ 612 
+ 613     for (token = nextToken(&amp;ctx); token != NULL; token = nextToken(&amp;ctx)) {
+ 614         // should not have more tokens than expected
+ 615         if (actual_cnt &gt;= cnt_tokens) {
+ 616             printf("FAILED: Extra token detected: &lt;%s&gt;\n", token);
+ 617             exit(2);
+ 618         }
+ 619         if (JLI_StrCmp(token, tokens[actual_cnt]) != 0) {
+ 620             fail(tokens[actual_cnt], token, actual_cnt);
+ 621         }
+ 622         actual_cnt++;
+ 623     }
+ 624 
+ 625     char* last = NULL;
+ 626     if (ctx.parts-&gt;size != 0) {
+ 627         last = JLI_List_combine(ctx.parts);
+ 628     }
+ 629     JLI_List_free(ctx.parts);
+ 630 
+ 631     if (actual_cnt &gt;= cnt_tokens) {
+ 632         // same number of tokens, should have nothing left to parse
+ 633         if (last != NULL) {
+ 634             if (*last != '#') {
+ 635                 printf("Leftover detected: %s", last);
+ 636                 exit(2);
+ 637             }
+ 638         }
+ 639     } else {
+ 640         if (JLI_StrCmp(last, tokens[actual_cnt]) != 0) {
+ 641             fail(tokens[actual_cnt], last, actual_cnt);
+ 642         }
+ 643         actual_cnt++;
+ 644     }
+ 645     if (actual_cnt != cnt_tokens) {
+ 646         printf("FAILED: Number of tokens not match, expected %lu, got %lu\n",
+ 647             cnt_tokens, actual_cnt);
+ 648         exit(3);
+ 649     }
+ 650 
+ 651     printf("PASS\n");
+ 652 }
+ 653 
+ 654 #define DO_CASE(name) \
+ 655     test_case(name[0], name + 1, sizeof(name)/sizeof(char*) - 1)
+ 656 
+ 657 int main(int argc, char** argv) {
+ 658     size_t i, j;
+ 659 
+ 660     char* case1[] = { "-version -cp \"c:\\\\java libs\\\\one.jar\" \n",
+ 661         "-version", "-cp", "c:\\java libs\\one.jar" };
+ 662     DO_CASE(case1);
+ 663 
+ 664     // note the open quote at the end
+ 665     char* case2[] = { "com.foo.Panda \"Furious 5\"\fand\t'Shi Fu' \"escape\tprison",
+ 666         "com.foo.Panda", "Furious 5", "and", "Shi Fu", "escape\tprison"};
+ 667     DO_CASE(case2);
+ 668 
+ 669     char* escaped_chars[] = { "escaped chars testing \"\\a\\b\\c\\f\\n\\r\\t\\v\\9\\6\\23\\82\\28\\377\\477\\278\\287\"",
+ 670         "escaped", "chars", "testing", "abc\f\n\r\tv96238228377477278287"};
+ 671     DO_CASE(escaped_chars);
+ 672 
+ 673     char* mixed_quote[]  = { "\"mix 'single quote' in double\" 'mix \"double quote\" in single' partial\"quote me\"this",
+ 674         "mix 'single quote' in double", "mix \"double quote\" in single", "partialquote methis"};
+ 675     DO_CASE(mixed_quote);
+ 676 
+ 677     char* comments[]  = { "line one #comment\n'line #2' #rest are comment\r\n#comment on line 3\nline 4 #comment to eof",
+ 678         "line", "one", "line #2", "line", "4"};
+ 679     DO_CASE(comments);
+ 680 
+ 681     char* open_quote[] = { "This is an \"open quote \n    across line\n\t, note for WS.",
+ 682         "This", "is", "an", "open quote ", "across", "line", ",", "note", "for", "WS." };
+ 683     DO_CASE(open_quote);
+ 684 
+ 685     char* escape_in_open_quote[] = { "Try \"this \\\\\\\\ escape\\n double quote \\\" in open quote",
+ 686         "Try", "this \\\\ escape\n double quote \" in open quote" };
+ 687     DO_CASE(escape_in_open_quote);
+ 688 
+ 689     char* quote[] = { "'-Dmy.quote.single'='Property in single quote. Here a double quote\" Add some slashes \\\\/'",
+ 690         "-Dmy.quote.single=Property in single quote. Here a double quote\" Add some slashes \\/" };
+ 691     DO_CASE(quote);
+ 692 
+ 693     char* multi[] = { "\"Open quote to \n  new \"line \\\n\r   third\\\n\r\\\tand\ffourth\"",
+ 694         "Open quote to ", "new", "line third\tand\ffourth" };
+ 695     DO_CASE(multi);
+ 696 
+ 697     char* escape_quote[] = { "c:\\\"partial quote\"\\lib",
+ 698         "c:\\partial quote\\lib" };
+ 699     DO_CASE(escape_quote);
+ 700 
+ 701     if (argc &gt; 1) {
+ 702         for (i = 0; i &lt; argc; i++) {
+ 703             JLI_List tokens = JLI_PreprocessArg(argv[i], JNI_FALSE);
+ 704             if (NULL != tokens) {
+ 705                 for (j = 0; j &lt; tokens-&gt;size; j++) {
+ 706                     printf("Token[%lu]: &lt;%s&gt;\n", (unsigned long) j, tokens-&gt;elements[j]);
+ 707                 }
+ 708             }
+ 709         }
+ 710     }
+ 711 }
+ 712 
+ 713 #endif // DEBUG_ARGFILE
 </pre></body></html>

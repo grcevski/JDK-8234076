@@ -1,0 +1,121 @@
+--- old/test/jdk/tools/launcher/ArgsEnvVar.java	2019-12-09 16:11:08.386811900 -0500
++++ new/test/jdk/tools/launcher/ArgsEnvVar.java	2019-12-09 16:10:59.902809900 -0500
+@@ -37,6 +37,8 @@
+ import java.util.List;
+ import java.util.Map;
+ import java.util.regex.Pattern;
++import java.nio.file.Paths;
++import java.nio.file.Path;
+ 
+ public class ArgsEnvVar extends TestHelper {
+     private static File testJar = null;
+@@ -153,6 +155,7 @@
+                 List.of("-jar", "test.jar"),
+                 List.of("-m", "test/Foo"),
+                 List.of("--module", "test/Foo"),
++                List.of("--module=test/Foo"),
+                 List.of("--dry-run"),
+                 List.of("-h"),
+                 List.of("-?"),
+@@ -241,6 +244,101 @@
+         verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
+     }
+ 
++    /**
++     * Helper method to initialize a simple module that just prints the passed in arguments
++     */
++    private void initModulesDir(File modulesDir) throws IOException {
++        if (modulesDir.exists()) {
++            recursiveDelete(modulesDir);
++        }
++
++        modulesDir.mkdirs();
++
++        File srcDir = new File(modulesDir, "src");
++        File modsDir = new File(modulesDir, "mods");
++        File testDir = new File(srcDir, "test");
++        File launcherTestDir = new File(testDir, "launcher");
++        srcDir.mkdir();
++        modsDir.mkdir();
++        testDir.mkdir();
++        launcherTestDir.mkdir();
++
++        ArrayList<String> scratchpad = new ArrayList<>();
++        scratchpad.add("module test {}");
++        createFile(new File(testDir, "module-info.java"), scratchpad);
++        scratchpad.clear();
++        scratchpad.add("package launcher;");
++        scratchpad.add("import java.util.Arrays;");
++        scratchpad.add("public class Main {");
++        scratchpad.add("public static void main(String[] args) {");
++        scratchpad.add("System.out.println(Arrays.toString(args));");
++        scratchpad.add("}");
++        scratchpad.add("}");
++        createFile(new File(launcherTestDir, "Main.java"), scratchpad);
++    }
++
++    @Test
++    // That that we can correctly handle the module longform argument option
++    // when supplied in an argument file
++    public void modulesInArgsFile() throws IOException {
++        File cwd = new File(".");
++        File testModuleDir = new File(cwd, "modules_test");
++
++        initModulesDir(testModuleDir);
++
++        Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");
++        Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");
++
++        // test module / main class
++        String MODULE_OPTION = "--module=test/launcher.Main";
++        String TEST_MODULE = "test";
++
++        // javac -d mods/test src/test/**
++        TestResult tr = doExec(
++            javacCmd,
++            "-d", MODS_DIR.toString(),
++            "--module-source-path", SRC_DIR.toString(),
++            "--module", TEST_MODULE);
++
++        if (!tr.isOK()) {
++            System.out.println("test did not compile");
++            throw new RuntimeException("Error: modules test did not compile");
++        }
++
++        // verify the terminating ability of --module= through environment variables
++        File argFile = createArgFile("cmdargs", List.of("--module-path", MODS_DIR.toString(), MODULE_OPTION, "--hello"));
++        env.put(JDK_JAVA_OPTIONS, "@cmdargs");
++        tr = doExec(env, javaCmd);
++        tr.checkNegative();
++        tr.contains("Error: Option " + MODULE_OPTION + " in @cmdargs is not allowed in environment variable JDK_JAVA_OPTIONS");
++        if (!tr.testStatus) {
++            System.out.println(tr);
++            throw new RuntimeException("test fails");
++        }
++
++        // check that specifying --module and --module-path with file works
++        tr = doExec(javaCmd, "-Dfile.encoding=UTF-8", "\"@cmdargs\"");
++        tr.contains("[--hello]");
++        if (!tr.testStatus) {
++            System.out.println(tr);
++            throw new RuntimeException("test fails");
++        }
++
++        // check with reversed --module-path and --module in the arguments file, this will fail, --module= is terminating
++        File argFile1 = createArgFile("cmdargs1", List.of(MODULE_OPTION, "--module-path", MODS_DIR.toString(), "--hello"));
++        tr = doExec(javaCmd, "-Dfile.encoding=UTF-8", "\"@cmdargs1\"");
++        tr.checkNegative();
++        if (!tr.testStatus) {
++            System.out.println(tr);
++            throw new RuntimeException("test fails");
++        }
++
++        // clean-up
++        argFile.delete();
++        argFile1.delete();
++        recursiveDelete(testModuleDir);
++    }
++
+     public static void main(String... args) throws Exception {
+         init();
+         ArgsEnvVar a = new ArgsEnvVar();
