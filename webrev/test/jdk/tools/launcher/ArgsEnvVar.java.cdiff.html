@@ -80,7 +80,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 <title>jdk Cdiff test/jdk/tools/launcher/ArgsEnvVar.java</title>
 </head>
 <body id="SUNWwebrev">
-<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestSpecialArgs.java.cdiff.html' target='_top'>next &gt</a></center>
+<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestHelper.java.cdiff.html' target='_top'>next &gt</a></center>
 <h2>test/jdk/tools/launcher/ArgsEnvVar.java</h2>
         <a class="print" href="javascript:print()">Print this page</a>
 <pre></pre>
@@ -113,44 +113,12 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
                   List.of("-help"),
                   List.of("--help"),
 <hr /><span class="oldmarker">*** 239,248 ****</span>
-<span class="newmarker">--- 242,346 ----</span>
+<span class="newmarker">--- 242,314 ----</span>
           env.put(JDK_JAVA_OPTIONS, "  --add-exports java.base/jdk.internal.misc=ALL-UNNAMED ");
           tr = doExec(env, javaCmd, "-jar", "test.jar");
           verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
       }
   
-<span class="new">+     /**</span>
-<span class="new">+      * Helper method to initialize a simple module that just prints the passed in arguments</span>
-<span class="new">+      */</span>
-<span class="new">+     private void initModulesDir(File modulesDir) throws IOException {</span>
-<span class="new">+         if (modulesDir.exists()) {</span>
-<span class="new">+             recursiveDelete(modulesDir);</span>
-<span class="new">+         }</span>
-<span class="new">+ </span>
-<span class="new">+         modulesDir.mkdirs();</span>
-<span class="new">+ </span>
-<span class="new">+         File srcDir = new File(modulesDir, "src");</span>
-<span class="new">+         File modsDir = new File(modulesDir, "mods");</span>
-<span class="new">+         File testDir = new File(srcDir, "test");</span>
-<span class="new">+         File launcherTestDir = new File(testDir, "launcher");</span>
-<span class="new">+         srcDir.mkdir();</span>
-<span class="new">+         modsDir.mkdir();</span>
-<span class="new">+         testDir.mkdir();</span>
-<span class="new">+         launcherTestDir.mkdir();</span>
-<span class="new">+ </span>
-<span class="new">+         ArrayList&lt;String&gt; scratchpad = new ArrayList&lt;&gt;();</span>
-<span class="new">+         scratchpad.add("module test {}");</span>
-<span class="new">+         createFile(new File(testDir, "module-info.java"), scratchpad);</span>
-<span class="new">+         scratchpad.clear();</span>
-<span class="new">+         scratchpad.add("package launcher;");</span>
-<span class="new">+         scratchpad.add("import java.util.Arrays;");</span>
-<span class="new">+         scratchpad.add("public class Main {");</span>
-<span class="new">+         scratchpad.add("public static void main(String[] args) {");</span>
-<span class="new">+         scratchpad.add("System.out.println(Arrays.toString(args));");</span>
-<span class="new">+         scratchpad.add("}");</span>
-<span class="new">+         scratchpad.add("}");</span>
-<span class="new">+         createFile(new File(launcherTestDir, "Main.java"), scratchpad);</span>
-<span class="new">+     }</span>
 <span class="new">+ </span>
 <span class="new">+     @Test</span>
 <span class="new">+     // That that we can correctly handle the module longform argument option</span>
@@ -159,7 +127,7 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
 <span class="new">+         File cwd = new File(".");</span>
 <span class="new">+         File testModuleDir = new File(cwd, "modules_test");</span>
 <span class="new">+ </span>
-<span class="new">+         initModulesDir(testModuleDir);</span>
+<span class="new">+         createEchoArgumentsModule(testModuleDir);</span>
 <span class="new">+ </span>
 <span class="new">+         Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");</span>
 <span class="new">+         Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");</span>
@@ -220,6 +188,6 @@ hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
           a.run(args);
           if (testExitValue &gt; 0) {
 </pre>
-<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestSpecialArgs.java.cdiff.html' target='_top'>next &gt</a></center>
+<center><a href='../../../../src/java.base/windows/native/libjli/java_md.c.cdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestHelper.java.cdiff.html' target='_top'>next &gt</a></center>
 </body></html>
 

@@ -1,5 +1,5 @@
---- old/test/jdk/tools/launcher/ArgsEnvVar.java	2019-12-09 16:11:08.386811900 -0500
-+++ new/test/jdk/tools/launcher/ArgsEnvVar.java	2019-12-09 16:10:59.902809900 -0500
+--- old/test/jdk/tools/launcher/ArgsEnvVar.java	2019-12-11 12:49:16.214085800 -0500
++++ new/test/jdk/tools/launcher/ArgsEnvVar.java	2019-12-11 12:49:15.638084300 -0500
 @@ -37,6 +37,8 @@
  import java.util.List;
  import java.util.Map;
@@ -17,42 +17,10 @@
                  List.of("--dry-run"),
                  List.of("-h"),
                  List.of("-?"),
-@@ -241,6 +244,101 @@
+@@ -241,6 +244,69 @@
          verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
      }
  
-+    /**
-+     * Helper method to initialize a simple module that just prints the passed in arguments
-+     */
-+    private void initModulesDir(File modulesDir) throws IOException {
-+        if (modulesDir.exists()) {
-+            recursiveDelete(modulesDir);
-+        }
-+
-+        modulesDir.mkdirs();
-+
-+        File srcDir = new File(modulesDir, "src");
-+        File modsDir = new File(modulesDir, "mods");
-+        File testDir = new File(srcDir, "test");
-+        File launcherTestDir = new File(testDir, "launcher");
-+        srcDir.mkdir();
-+        modsDir.mkdir();
-+        testDir.mkdir();
-+        launcherTestDir.mkdir();
-+
-+        ArrayList<String> scratchpad = new ArrayList<>();
-+        scratchpad.add("module test {}");
-+        createFile(new File(testDir, "module-info.java"), scratchpad);
-+        scratchpad.clear();
-+        scratchpad.add("package launcher;");
-+        scratchpad.add("import java.util.Arrays;");
-+        scratchpad.add("public class Main {");
-+        scratchpad.add("public static void main(String[] args) {");
-+        scratchpad.add("System.out.println(Arrays.toString(args));");
-+        scratchpad.add("}");
-+        scratchpad.add("}");
-+        createFile(new File(launcherTestDir, "Main.java"), scratchpad);
-+    }
 +
 +    @Test
 +    // That that we can correctly handle the module longform argument option
@@ -61,7 +29,7 @@
 +        File cwd = new File(".");
 +        File testModuleDir = new File(cwd, "modules_test");
 +
-+        initModulesDir(testModuleDir);
++        createEchoArgumentsModule(testModuleDir);
 +
 +        Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");
 +        Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");

@@ -1,5 +1,5 @@
---- old/src/java.base/windows/native/libjli/java_md.c	2019-12-09 16:10:44.533770500 -0500
-+++ new/src/java.base/windows/native/libjli/java_md.c	2019-12-09 16:10:42.595763400 -0500
+--- old/src/java.base/windows/native/libjli/java_md.c	2019-12-11 12:49:12.624306800 -0500
++++ new/src/java.base/windows/native/libjli/java_md.c	2019-12-11 12:49:12.066722300 -0500
 @@ -34,6 +34,7 @@
  #include <sys/stat.h>
  #include <wtypes.h>

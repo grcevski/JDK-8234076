@@ -244,38 +244,6 @@ public class ArgsEnvVar extends TestHelper {
         verifyOptions(List.of("--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED", "-jar", "test.jar"), tr);
     }
 
-    /**
-     * Helper method to initialize a simple module that just prints the passed in arguments
-     */
-    private void initModulesDir(File modulesDir) throws IOException {
-        if (modulesDir.exists()) {
-            recursiveDelete(modulesDir);
-        }
-
-        modulesDir.mkdirs();
-
-        File srcDir = new File(modulesDir, "src");
-        File modsDir = new File(modulesDir, "mods");
-        File testDir = new File(srcDir, "test");
-        File launcherTestDir = new File(testDir, "launcher");
-        srcDir.mkdir();
-        modsDir.mkdir();
-        testDir.mkdir();
-        launcherTestDir.mkdir();
-
-        ArrayList<String> scratchpad = new ArrayList<>();
-        scratchpad.add("module test {}");
-        createFile(new File(testDir, "module-info.java"), scratchpad);
-        scratchpad.clear();
-        scratchpad.add("package launcher;");
-        scratchpad.add("import java.util.Arrays;");
-        scratchpad.add("public class Main {");
-        scratchpad.add("public static void main(String[] args) {");
-        scratchpad.add("System.out.println(Arrays.toString(args));");
-        scratchpad.add("}");
-        scratchpad.add("}");
-        createFile(new File(launcherTestDir, "Main.java"), scratchpad);
-    }
 
     @Test
     // That that we can correctly handle the module longform argument option
@@ -284,7 +252,7 @@ public class ArgsEnvVar extends TestHelper {
         File cwd = new File(".");
         File testModuleDir = new File(cwd, "modules_test");
 
-        initModulesDir(testModuleDir);
+        createEchoArgumentsModule(testModuleDir);
 
         Path SRC_DIR = Paths.get(testModuleDir.getAbsolutePath(), "src");
         Path MODS_DIR = Paths.get(testModuleDir.getAbsolutePath(), "mods");

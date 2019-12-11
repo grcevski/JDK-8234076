@@ -1,0 +1,840 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+    <script type="text/javascript" src="../../../../ancnav.js"></script>
+    </head>
+    <body id="SUNWwebrev" onkeypress="keypress(event);">
+    <a name="0"></a>
+    <pre></pre><hr></hr>
+<pre>
+   1 /*
+   2  * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+   3  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+   4  *
+   5  * This code is free software; you can redistribute it and/or modify it
+   6  * under the terms of the GNU General Public License version 2 only, as
+   7  * published by the Free Software Foundation.
+   8  *
+   9  * This code is distributed in the hope that it will be useful, but WITHOUT
+  10  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  11  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+  12  * version 2 for more details (a copy is included in the LICENSE file that
+  13  * accompanied this code).
+  14  *
+  15  * You should have received a copy of the GNU General Public License version
+  16  * 2 along with this work; if not, write to the Free Software Foundation,
+  17  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  18  *
+  19  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+  20  * or visit www.oracle.com if you need additional information or have any
+  21  * questions.
+  22  */
+  23 
+  24 import java.io.OutputStream;
+  25 import java.io.InputStream;
+  26 import java.lang.annotation.ElementType;
+  27 import java.lang.annotation.Retention;
+  28 import java.lang.annotation.RetentionPolicy;
+  29 import java.lang.annotation.Target;
+  30 import java.lang.reflect.Method;
+  31 import java.util.regex.Pattern;
+  32 import java.io.StringWriter;
+  33 import java.io.PrintWriter;
+  34 import java.util.Set;
+  35 import java.io.BufferedReader;
+  36 import java.io.File;
+  37 import java.io.FileFilter;
+  38 import java.io.FileNotFoundException;
+  39 import java.io.FileOutputStream;
+  40 import java.io.IOException;
+  41 import java.io.InputStreamReader;
+  42 import java.io.PrintStream;
+  43 import java.nio.charset.Charset;
+  44 import java.nio.file.attribute.BasicFileAttributes;
+  45 import java.nio.file.Files;
+  46 import java.nio.file.FileVisitResult;
+  47 import java.nio.file.SimpleFileVisitor;
+  48 import java.nio.file.Path;
+  49 import java.util.ArrayList;
+  50 import java.util.List;
+  51 import java.util.Locale;
+  52 import java.util.Map;
+  53 import java.util.Arrays;
+  54 import java.util.spi.ToolProvider;
+  55 
+  56 import static java.nio.file.StandardCopyOption.*;
+  57 import static java.nio.file.StandardOpenOption.*;
+  58 
+  59 /**
+  60  * This class provides some common utilities for the launcher tests.
+  61  */
+  62 public class TestHelper {
+  63     // commonly used jtreg constants
+  64     static final File TEST_CLASSES_DIR;
+  65     static final File TEST_SOURCES_DIR;
+  66 
+  67     static final String JAVAHOME = System.getProperty("java.home");
+  68     static final String JAVA_BIN;
+  69     static final String JAVA_LIB;
+  70     static final String javaCmd;
+  71     static final String javawCmd;
+  72     static final String javacCmd;
+  73     static final String jarCmd;
+  74     static final boolean haveServerVM;
+  75     static final boolean haveClientVM;
+  76 
+  77     static final ToolProvider compiler = ToolProvider.findFirst("javac").orElse(null);
+  78 
+  79     static final boolean debug = Boolean.getBoolean("TestHelper.Debug");
+  80     static final boolean isWindows =
+  81             System.getProperty("os.name", "unknown").startsWith("Windows");
+  82     static final boolean isMacOSX =
+  83             System.getProperty("os.name", "unknown").contains("OS X");
+  84     static final boolean is64Bit =
+  85             System.getProperty("sun.arch.data.model").equals("64");
+  86     static final boolean is32Bit =
+  87             System.getProperty("sun.arch.data.model").equals("32");
+  88     static final boolean isSolaris =
+  89             System.getProperty("os.name", "unknown").startsWith("SunOS");
+  90     static final boolean isLinux =
+  91             System.getProperty("os.name", "unknown").startsWith("Linux");
+  92     static final boolean isAIX =
+  93             System.getProperty("os.name", "unknown").startsWith("AIX");
+  94     static final String LIBJVM = isWindows
+  95                         ? "jvm.dll"
+  96                         : "libjvm" + (isMacOSX ? ".dylib" : ".so");
+  97 
+  98     static final boolean isSparc = System.getProperty("os.arch").startsWith("sparc");
+  99 
+ 100     // make a note of the golden default locale
+ 101     static final Locale DefaultLocale = Locale.getDefault();
+ 102 
+ 103     static final String JAVA_FILE_EXT  = ".java";
+ 104     static final String CLASS_FILE_EXT = ".class";
+ 105     static final String JAR_FILE_EXT   = ".jar";
+ 106     static final String EXE_FILE_EXT   = ".exe";
+ 107     static final String JLDEBUG_KEY     = "_JAVA_LAUNCHER_DEBUG";
+ 108     static final String EXPECTED_MARKER = "TRACER_MARKER:About to EXEC";
+ 109     static final String TEST_PREFIX     = "###TestError###: ";
+ 110 
+ 111     static int testExitValue = 0;
+ 112 
+ 113     static {
+ 114         String tmp = System.getProperty("test.classes", null);
+ 115         if (tmp == null) {
+ 116             throw new Error("property test.classes not defined ??");
+ 117         }
+ 118         TEST_CLASSES_DIR = new File(tmp).getAbsoluteFile();
+ 119 
+ 120         tmp = System.getProperty("test.src", null);
+ 121         if (tmp == null) {
+ 122             throw new Error("property test.src not defined ??");
+ 123         }
+ 124         TEST_SOURCES_DIR = new File(tmp).getAbsoluteFile();
+ 125 
+ 126         if (is64Bit &amp;&amp; is32Bit) {
+ 127             throw new RuntimeException("arch model cannot be both 32 and 64 bit");
+ 128         }
+ 129         if (!is64Bit &amp;&amp; !is32Bit) {
+ 130             throw new RuntimeException("arch model is not 32 or 64 bit ?");
+ 131         }
+ 132 
+ 133         File binDir = new File(JAVAHOME, "bin");
+ 134         JAVA_BIN = binDir.getAbsolutePath();
+ 135         File libDir = new File(JAVAHOME, "lib");
+ 136         JAVA_LIB = libDir.getAbsolutePath();
+ 137 
+ 138         File javaCmdFile = (isWindows)
+ 139                 ? new File(binDir, "java.exe")
+ 140                 : new File(binDir, "java");
+ 141         javaCmd = javaCmdFile.getAbsolutePath();
+ 142         if (!javaCmdFile.canExecute()) {
+ 143             throw new RuntimeException("java &lt;" + TestHelper.javaCmd +
+ 144                     "&gt; must exist and should be executable");
+ 145         }
+ 146 
+ 147         File javacCmdFile = (isWindows)
+ 148                 ? new File(binDir, "javac.exe")
+ 149                 : new File(binDir, "javac");
+ 150         javacCmd = javacCmdFile.getAbsolutePath();
+ 151 
+ 152         File jarCmdFile = (isWindows)
+ 153                 ? new File(binDir, "jar.exe")
+ 154                 : new File(binDir, "jar");
+ 155         jarCmd = jarCmdFile.getAbsolutePath();
+ 156         if (!jarCmdFile.canExecute()) {
+ 157             throw new RuntimeException("java &lt;" + TestHelper.jarCmd +
+ 158                     "&gt; must exist and should be executable");
+ 159         }
+ 160 
+ 161         if (isWindows) {
+ 162             File javawCmdFile = new File(binDir, "javaw.exe");
+ 163             javawCmd = javawCmdFile.getAbsolutePath();
+ 164             if (!javawCmdFile.canExecute()) {
+ 165                 throw new RuntimeException("java &lt;" + javawCmd +
+ 166                         "&gt; must exist and should be executable");
+ 167             }
+ 168         } else {
+ 169             javawCmd = null;
+ 170         }
+ 171 
+ 172         if (!javacCmdFile.canExecute()) {
+ 173             throw new RuntimeException("java &lt;" + javacCmd +
+ 174                     "&gt; must exist and should be executable");
+ 175         }
+ 176 
+ 177         haveClientVM = haveVmVariant("client");
+ 178         haveServerVM = haveVmVariant("server");
+ 179     }
+ 180     private static boolean haveVmVariant(String type) {
+ 181         if (isWindows) {
+ 182             File vmDir = new File(JAVA_BIN, type);
+ 183             File jvmFile = new File(vmDir, LIBJVM);
+ 184             return jvmFile.exists();
+ 185         } else {
+ 186             File vmDir = new File(JAVA_LIB, type);
+ 187             File jvmFile = new File(vmDir, LIBJVM);
+ 188             return jvmFile.exists();
+ 189         }
+ 190     }
+ 191     void run(String[] args) throws Exception {
+ 192         int passed = 0, failed = 0;
+ 193         final Pattern p = (args != null &amp;&amp; args.length &gt; 0)
+ 194                 ? Pattern.compile(args[0])
+ 195                 : null;
+ 196         for (Method m : this.getClass().getDeclaredMethods()) {
+ 197             boolean selected = (p == null)
+ 198                     ? m.isAnnotationPresent(Test.class)
+ 199                     : p.matcher(m.getName()).matches();
+ 200             if (selected) {
+ 201                 try {
+ 202                     m.invoke(this, (Object[]) null);
+ 203                     System.out.println(m.getName() + ": OK");
+ 204                     passed++;
+ 205                     System.out.printf("Passed: %d, Failed: %d, ExitValue: %d%n",
+ 206                                       passed, failed, testExitValue);
+ 207                 } catch (Throwable ex) {
+ 208                     System.out.printf("Test %s failed: %s %n", m, ex);
+ 209                     System.out.println("----begin detailed exceptions----");
+ 210                     ex.printStackTrace(System.out);
+ 211                     for (Throwable t : ex.getSuppressed()) {
+ 212                         t.printStackTrace(System.out);
+ 213                     }
+ 214                     System.out.println("----end detailed exceptions----");
+ 215                     failed++;
+ 216                 }
+ 217             }
+ 218         }
+ 219         System.out.printf("Total: Passed: %d, Failed %d%n", passed, failed);
+ 220         if (failed &gt; 0) {
+ 221             throw new RuntimeException("Tests failed: " + failed);
+ 222         }
+ 223         if (passed == 0 &amp;&amp; failed == 0) {
+ 224             throw new AssertionError("No test(s) selected: passed = " +
+ 225                     passed + ", failed = " + failed + " ??????????");
+ 226         }
+ 227     }
+ 228 
+ 229     /*
+ 230      * usually the jre/lib/arch-name is the same as os.arch, except for x86.
+ 231      */
+ 232     static String getJreArch() {
+ 233         String arch = System.getProperty("os.arch");
+ 234         return arch.equals("x86") ? "i386" : arch;
+ 235     }
+ 236     static String getArch() {
+ 237         return System.getProperty("os.arch");
+ 238     }
+ 239     static File getClassFile(File javaFile) {
+ 240         String s = javaFile.getAbsolutePath().replace(JAVA_FILE_EXT, CLASS_FILE_EXT);
+ 241         return new File(s);
+ 242     }
+ 243 
+ 244     static File getJavaFile(File classFile) {
+ 245         String s = classFile.getAbsolutePath().replace(CLASS_FILE_EXT, JAVA_FILE_EXT);
+ 246         return new File(s);
+ 247     }
+ 248 
+ 249     static String baseName(File f) {
+ 250         String s = f.getName();
+ 251         return s.substring(0, s.indexOf("."));
+ 252     }
+ 253 
+ 254     /*
+ 255      * A convenience method to create a jar with jar file name and defs
+ 256      */
+ 257     static void createJar(File jarName, String... mainDefs)
+ 258             throws FileNotFoundException{
+ 259         createJar(null, jarName, new File("Foo"), mainDefs);
+ 260     }
+ 261 
+ 262     /*
+ 263      * A convenience method to create a java file, compile and jar it up, using
+ 264      * the sole class file name in the jar, as the Main-Class attribute value.
+ 265      */
+ 266     static void createJar(File jarName, File mainClass, String... mainDefs)
+ 267             throws FileNotFoundException {
+ 268             createJar(null, jarName, mainClass, mainDefs);
+ 269     }
+ 270 
+ 271     /*
+ 272      * A convenience method to compile java files.
+ 273      */
+ 274     static void compile(String... compilerArgs) {
+ 275         if (compiler.run(System.out, System.err, compilerArgs) != 0) {
+ 276             String sarg = "";
+ 277             for (String x : compilerArgs) {
+ 278                 sarg.concat(x + " ");
+ 279             }
+ 280             throw new Error("compilation failed: " + sarg);
+ 281         }
+ 282     }
+ 283 
+ 284     /*
+ 285      * A generic jar file creator to create a java file, compile it
+ 286      * and jar it up, a specific Main-Class entry name in the
+ 287      * manifest can be specified or a null to use the sole class file name
+ 288      * as the Main-Class attribute value.
+ 289      */
+ 290     static void createJar(String mEntry, File jarName, File mainClass,
+ 291             String... mainDefs) throws FileNotFoundException {
+ 292         if (jarName.exists()) {
+ 293             jarName.delete();
+ 294         }
+ 295         try (PrintStream ps = new PrintStream(new FileOutputStream(mainClass + ".java"))) {
+ 296             ps.println("public class Foo {");
+ 297             if (mainDefs != null) {
+ 298                 for (String x : mainDefs) {
+ 299                     ps.println(x);
+ 300                 }
+ 301             }
+ 302             ps.println("}");
+ 303         }
+ 304 
+ 305         String compileArgs[] = {
+ 306             mainClass + ".java"
+ 307         };
+ 308         if (compiler.run(System.out, System.err, compileArgs) != 0) {
+ 309             throw new RuntimeException("compilation failed " + mainClass + ".java");
+ 310         }
+ 311         if (mEntry == null) {
+ 312             mEntry = mainClass.getName();
+ 313         }
+ 314         String jarArgs[] = {
+ 315             (debug) ? "cvfe" : "cfe",
+ 316             jarName.getAbsolutePath(),
+ 317             mEntry,
+ 318             mainClass.getName() + ".class"
+ 319         };
+ 320         createJar(jarArgs);
+ 321     }
+ 322 
+ 323    static void createJar(String... args) {
+ 324         List&lt;String&gt; cmdList = new ArrayList&lt;&gt;();
+ 325         cmdList.add(jarCmd);
+ 326         cmdList.addAll(Arrays.asList(args));
+ 327         doExec(cmdList.toArray(new String[cmdList.size()]));
+ 328    }
+ 329 
+ 330    static void copyStream(InputStream in, OutputStream out) throws IOException {
+ 331         byte[] buf = new byte[8192];
+ 332         int n = in.read(buf);
+ 333         while (n &gt; 0) {
+ 334             out.write(buf, 0, n);
+ 335             n = in.read(buf);
+ 336         }
+ 337     }
+ 338 
+ 339    static void copyFile(File src, File dst) throws IOException {
+ 340         Path parent = dst.toPath().getParent();
+ 341         if (parent != null) {
+ 342             Files.createDirectories(parent);
+ 343         }
+ 344         Files.copy(src.toPath(), dst.toPath(), COPY_ATTRIBUTES, REPLACE_EXISTING);
+ 345     }
+ 346 
+ 347     /**
+ 348      * Attempt to create a file at the given location. If an IOException
+ 349      * occurs then back off for a moment and try again. When a number of
+ 350      * attempts fail, give up and throw an exception.
+ 351      */
+ 352     void createAFile(File aFile, List&lt;String&gt; lines) throws IOException {
+ 353         createAFile(aFile, lines, true);
+ 354     }
+ 355 
+ 356     void createAFile(File aFile, List&lt;String&gt; lines, boolean endWithNewline) throws IOException {
+ 357         IOException cause = null;
+ 358         for (int attempts = 0; attempts &lt; 10; attempts++) {
+ 359             try {
+ 360                 if (endWithNewline) {
+ 361                     Files.write(aFile.getAbsoluteFile().toPath(),
+ 362                         lines, Charset.defaultCharset(),
+ 363                         CREATE, TRUNCATE_EXISTING, WRITE);
+ 364                 } else {
+ 365                     Files.write(aFile.getAbsoluteFile().toPath(),
+ 366                         String.join(System.lineSeparator(), lines).getBytes(Charset.defaultCharset()),
+ 367                         CREATE, TRUNCATE_EXISTING, WRITE);
+ 368                 }
+ 369                 if (cause != null) {
+ 370                     /*
+ 371                      * report attempts and errors that were encountered
+ 372                      * for diagnostic purposes
+ 373                      */
+ 374                     System.err.println("Created batch file " +
+ 375                                         aFile + " in " + (attempts + 1) +
+ 376                                         " attempts");
+ 377                     System.err.println("Errors encountered: " + cause);
+ 378                     cause.printStackTrace();
+ 379                 }
+ 380                 return;
+ 381             } catch (IOException ioe) {
+ 382                 if (cause != null) {
+ 383                     // chain the exceptions so they all get reported for diagnostics
+ 384                     cause.addSuppressed(ioe);
+ 385                 } else {
+ 386                     cause = ioe;
+ 387                 }
+ 388             }
+ 389 
+ 390             try {
+ 391                 Thread.sleep(500);
+ 392             } catch (InterruptedException ie) {
+ 393                 if (cause != null) {
+ 394                     // cause should alway be non-null here
+ 395                     ie.addSuppressed(cause);
+ 396                 }
+ 397                 throw new RuntimeException("Interrupted while creating batch file", ie);
+ 398             }
+ 399         }
+ 400         throw new RuntimeException("Unable to create batch file", cause);
+ 401     }
+ 402 
+ 403     static void createFile(File outFile, List&lt;String&gt; content) throws IOException {
+ 404         Files.write(outFile.getAbsoluteFile().toPath(), content,
+ 405                 Charset.defaultCharset(), CREATE_NEW);
+ 406     }
+ 407 
+ 408     static void recursiveDelete(File target) throws IOException {
+ 409         if (!target.exists()) {
+ 410             return;
+ 411         }
+ 412         Files.walkFileTree(target.toPath(), new SimpleFileVisitor&lt;Path&gt;() {
+ 413             @Override
+ 414             public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+ 415                 try {
+ 416                     Files.deleteIfExists(dir);
+ 417                 } catch (IOException ex) {
+ 418                     System.out.println("Error: could not delete: " + dir.toString());
+ 419                     System.out.println(ex.getMessage());
+ 420                     return FileVisitResult.TERMINATE;
+ 421                 }
+ 422                 return FileVisitResult.CONTINUE;
+ 423             }
+ 424             @Override
+ 425             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+ 426                 try {
+ 427                     Files.deleteIfExists(file);
+ 428                 } catch (IOException ex) {
+ 429                     System.out.println("Error: could not delete: " + file.toString());
+ 430                     System.out.println(ex.getMessage());
+ 431                     return FileVisitResult.TERMINATE;
+ 432                 }
+ 433                 return FileVisitResult.CONTINUE;
+ 434             }
+ 435         });
+ 436     }
+ 437 
+ 438     static TestResult doExec(String...cmds) {
+ 439         return doExec(null, null, cmds);
+ 440     }
+ 441 
+ 442     static TestResult doExec(Map&lt;String, String&gt; envToSet, String...cmds) {
+ 443         return doExec(envToSet, null, cmds);
+ 444     }
+ 445     /*
+ 446      * A method which executes a java cmd and returns the results in a container
+ 447      */
+ 448     static TestResult doExec(Map&lt;String, String&gt; envToSet,
+ 449                              Set&lt;String&gt; envToRemove, String...cmds) {
+ 450         String cmdStr = "";
+ 451         for (String x : cmds) {
+ 452             cmdStr = cmdStr.concat(x + " ");
+ 453         }
+ 454         ProcessBuilder pb = new ProcessBuilder(cmds);
+ 455         Map&lt;String, String&gt; env = pb.environment();
+ 456         if (envToRemove != null) {
+ 457             for (String key : envToRemove) {
+ 458                 env.remove(key);
+ 459             }
+ 460         }
+ 461         if (envToSet != null) {
+ 462             env.putAll(envToSet);
+ 463         }
+ 464         BufferedReader rdr = null;
+ 465         try {
+ 466             List&lt;String&gt; outputList = new ArrayList&lt;&gt;();
+ 467             pb.redirectErrorStream(true);
+ 468             Process p = pb.start();
+ 469             rdr = new BufferedReader(new InputStreamReader(p.getInputStream()));
+ 470             String in = rdr.readLine();
+ 471             while (in != null) {
+ 472                 outputList.add(in);
+ 473                 in = rdr.readLine();
+ 474             }
+ 475             p.waitFor();
+ 476             p.destroy();
+ 477 
+ 478             return new TestHelper.TestResult(cmdStr, p.exitValue(), outputList,
+ 479                     env, new Throwable("current stack of the test"));
+ 480         } catch (Exception ex) {
+ 481             ex.printStackTrace();
+ 482             throw new RuntimeException(ex.getMessage());
+ 483         }
+ 484     }
+ 485 
+ 486     static FileFilter createFilter(final String extension) {
+ 487         return new FileFilter() {
+ 488             @Override
+ 489             public boolean accept(File pathname) {
+ 490                 String name = pathname.getName();
+ 491                 if (name.endsWith(extension)) {
+ 492                     return true;
+ 493                 }
+ 494                 return false;
+ 495             }
+ 496         };
+ 497     }
+ 498 
+ 499     static boolean isEnglishLocale() {
+ 500         return Locale.getDefault().getLanguage().equals("en");
+ 501     }
+ 502 
+<a name="1" id="anc1"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 503     /*
+ 504      * A class to encapsulate the test results and stuff, with some ease
+ 505      * of use methods to check the test results.
+ 506      */
+ 507     static class TestResult {
+ 508         PrintWriter status;
+ 509         StringWriter sw;
+ 510         int exitValue;
+ 511         List&lt;String&gt; testOutput;
+ 512         Map&lt;String, String&gt; env;
+ 513         Throwable t;
+ 514         boolean testStatus;
+ 515 
+ 516         public TestResult(String str, int rv, List&lt;String&gt; oList,
+ 517                 Map&lt;String, String&gt; env, Throwable t) {
+ 518             sw = new StringWriter();
+ 519             status = new PrintWriter(sw);
+ 520             status.println("Executed command: " + str + "\n");
+ 521             exitValue = rv;
+ 522             testOutput = oList;
+ 523             this.env = env;
+ 524             this.t = t;
+ 525             testStatus = true;
+ 526         }
+ 527 
+ 528         void appendError(String x) {
+ 529             testStatus = false;
+ 530             testExitValue++;
+ 531             status.println(TEST_PREFIX + x);
+ 532         }
+ 533 
+ 534         void indentStatus(String x) {
+ 535             status.println("  " + x);
+ 536         }
+ 537 
+ 538         void checkNegative() {
+ 539             if (exitValue == 0) {
+ 540                 appendError("test must not return 0 exit value");
+ 541             }
+ 542         }
+ 543 
+ 544         void checkPositive() {
+ 545             if (exitValue != 0) {
+ 546                 appendError("test did not return 0 exit value");
+ 547             }
+ 548         }
+ 549 
+ 550         boolean isOK() {
+ 551             return exitValue == 0;
+ 552         }
+ 553 
+ 554         boolean isZeroOutput() {
+ 555             if (!testOutput.isEmpty()) {
+ 556                 appendError("No message from cmd please");
+ 557                 return false;
+ 558             }
+ 559             return true;
+ 560         }
+ 561 
+ 562         boolean isNotZeroOutput() {
+ 563             if (testOutput.isEmpty()) {
+ 564                 appendError("Missing message");
+ 565                 return false;
+ 566             }
+ 567             return true;
+ 568         }
+ 569 
+ 570         @Override
+ 571         public String toString() {
+ 572             status.println("++++Begin Test Info++++");
+ 573             status.println("Test Status: " + (testStatus ? "PASS" : "FAIL"));
+ 574             status.println("++++Test Environment++++");
+ 575             for (String x : env.keySet()) {
+ 576                 indentStatus(x + "=" + env.get(x));
+ 577             }
+ 578             status.println("++++Test Output++++");
+ 579             for (String x : testOutput) {
+ 580                 indentStatus(x);
+ 581             }
+ 582             status.println("++++Test Stack Trace++++");
+ 583             status.println(t.toString());
+ 584             for (StackTraceElement e : t.getStackTrace()) {
+ 585                 indentStatus(e.toString());
+ 586             }
+ 587             status.println("++++End of Test Info++++");
+ 588             status.flush();
+ 589             String out = sw.toString();
+ 590             status.close();
+ 591             return out;
+ 592         }
+ 593 
+ 594         boolean contains(String str) {
+ 595             for (String x : testOutput) {
+ 596                 if (x.contains(str)) {
+ 597                     return true;
+ 598                 }
+ 599             }
+ 600             appendError("string &lt;" + str + "&gt; not found");
+ 601             return false;
+ 602         }
+ 603 
+ 604         boolean notContains(String str) {
+ 605             for (String x : testOutput) {
+ 606                 if (x.contains(str)) {
+ 607                     appendError("string &lt;" + str + "&gt; found");
+ 608                     return false;
+ 609                 }
+ 610             }
+ 611             return true;
+ 612         }
+ 613 
+ 614         boolean matches(String regexToMatch) {
+ 615             for (String x : testOutput) {
+ 616                 if (x.matches(regexToMatch)) {
+ 617                     return true;
+ 618                 }
+ 619             }
+ 620             appendError("regex &lt;" + regexToMatch + "&gt; not matched");
+ 621             return false;
+ 622         }
+ 623 
+ 624         boolean notMatches(String regexToMatch) {
+ 625             for (String x : testOutput) {
+ 626                 if (!x.matches(regexToMatch)) {
+ 627                     return true;
+ 628                 }
+ 629             }
+ 630             appendError("regex &lt;" + regexToMatch + "&gt; matched");
+ 631             return false;
+ 632         }
+ 633     }
+ 634     /**
+ 635     * Indicates that the annotated method is a test method.
+ 636     */
+ 637     @Retention(RetentionPolicy.RUNTIME)
+ 638     @Target(ElementType.METHOD)
+ 639     public @interface Test {}
+ 640 }
+<a name="2" id="anc2"></a><b style="font-size: large; color: red">--- EOF ---</b>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre><form name="eof"><input name="value" value="2" type="hidden" /></form></body></html>

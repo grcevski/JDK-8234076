@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<!--
+   Note to customizers: the body of the webrev is IDed as SUNWwebrev
+   to allow easy overriding by users of webrev via the userContent.css
+   mechanism available in some browsers.
+
+   For example, to have all "removed" information be red instead of
+   brown, set a rule in your userContent.css file like:
+
+       body#SUNWwebrev span.removed { color: red ! important; }
+-->
+<style type="text/css" media="screen">
+body {
+    background-color: #eeeeee;
+}
+hr {
+    border: none 0;
+    border-top: 1px solid #aaa;
+    height: 1px;
+}
+div.summary {
+    font-size: .8em;
+    border-bottom: 1px solid #aaa;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+div.summary h2 {
+    margin-bottom: 0.3em;
+}
+div.summary table th {
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+span.lineschanged {
+    font-size: 0.7em;
+}
+span.oldmarker {
+    color: red;
+    font-size: large;
+    font-weight: bold;
+}
+span.newmarker {
+    color: green;
+    font-size: large;
+    font-weight: bold;
+}
+span.removed {
+    color: brown;
+}
+span.changed {
+    color: blue;
+}
+span.new {
+    color: blue;
+    font-weight: bold;
+}
+a.print { font-size: x-small; }
+
+</style>
+
+<style type="text/css" media="print">
+pre { font-size: 0.8em; font-family: courier, monospace; }
+span.removed { color: #444; font-style: italic }
+span.changed { font-weight: bold; }
+span.new { font-weight: bold; }
+span.newmarker { font-size: 1.2em; font-weight: bold; }
+span.oldmarker { font-size: 1.2em; font-weight: bold; }
+a.print {display: none}
+hr { border: none 0; border-top: 1px solid #aaa; height: 1px; }
+</style>
+
+<title>jdk Sdiff test/jdk/tools/launcher </title>
+</head><body id="SUNWwebrev">
+<center><a href='../../../../test/jdk/tools/launcher/ArgsEnvVar.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestSpecialArgs.java.sdiff.html' target='_top'>next &gt</a></center>
+<h2>test/jdk/tools/launcher/TestHelper.java</h2>
+<a class="print" href="javascript:print()">Print this page</a>
+<pre></pre>
+
+<table><tr valign="top">
+<td><pre>
+
+</pre><hr></hr><pre>
+ 483         }
+ 484     }
+ 485 
+ 486     static FileFilter createFilter(final String extension) {
+ 487         return new FileFilter() {
+ 488             @Override
+ 489             public boolean accept(File pathname) {
+ 490                 String name = pathname.getName();
+ 491                 if (name.endsWith(extension)) {
+ 492                     return true;
+ 493                 }
+ 494                 return false;
+ 495             }
+ 496         };
+ 497     }
+ 498 
+ 499     static boolean isEnglishLocale() {
+ 500         return Locale.getDefault().getLanguage().equals("en");
+ 501     }
+ 502 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 503     /*
+ 504      * A class to encapsulate the test results and stuff, with some ease
+ 505      * of use methods to check the test results.
+ 506      */
+ 507     static class TestResult {
+ 508         PrintWriter status;
+ 509         StringWriter sw;
+ 510         int exitValue;
+ 511         List&lt;String&gt; testOutput;
+ 512         Map&lt;String, String&gt; env;
+ 513         Throwable t;
+ 514         boolean testStatus;
+ 515 
+ 516         public TestResult(String str, int rv, List&lt;String&gt; oList,
+ 517                 Map&lt;String, String&gt; env, Throwable t) {
+ 518             sw = new StringWriter();
+ 519             status = new PrintWriter(sw);
+ 520             status.println("Executed command: " + str + "\n");
+ 521             exitValue = rv;
+ 522             testOutput = oList;
+
+</pre><hr></hr>
+</pre></td><td><pre>
+
+</pre><hr></hr><pre>
+ 483         }
+ 484     }
+ 485 
+ 486     static FileFilter createFilter(final String extension) {
+ 487         return new FileFilter() {
+ 488             @Override
+ 489             public boolean accept(File pathname) {
+ 490                 String name = pathname.getName();
+ 491                 if (name.endsWith(extension)) {
+ 492                     return true;
+ 493                 }
+ 494                 return false;
+ 495             }
+ 496         };
+ 497     }
+ 498 
+ 499     static boolean isEnglishLocale() {
+ 500         return Locale.getDefault().getLanguage().equals("en");
+ 501     }
+ 502 
+<span class="new"> 503     /**</span>
+<span class="new"> 504      * Helper method to initialize a simple module that just prints the passed in arguments</span>
+<span class="new"> 505      */</span>
+<span class="new"> 506     static void createEchoArgumentsModule(File modulesDir) throws IOException {</span>
+<span class="new"> 507         if (modulesDir.exists()) {</span>
+<span class="new"> 508             recursiveDelete(modulesDir);</span>
+<span class="new"> 509         }</span>
+<span class="new"> 510 </span>
+<span class="new"> 511         modulesDir.mkdirs();</span>
+<span class="new"> 512 </span>
+<span class="new"> 513         File srcDir = new File(modulesDir, "src");</span>
+<span class="new"> 514         File modsDir = new File(modulesDir, "mods");</span>
+<span class="new"> 515         File testDir = new File(srcDir, "test");</span>
+<span class="new"> 516         File launcherTestDir = new File(testDir, "launcher");</span>
+<span class="new"> 517         srcDir.mkdir();</span>
+<span class="new"> 518         modsDir.mkdir();</span>
+<span class="new"> 519         testDir.mkdir();</span>
+<span class="new"> 520         launcherTestDir.mkdir();</span>
+<span class="new"> 521 </span>
+<span class="new"> 522         String[] moduleInfoCode = { "module test {}" };</span>
+<span class="new"> 523         createFile(new File(testDir, "module-info.java"), Arrays.asList(moduleInfoCode));</span>
+<span class="new"> 524 </span>
+<span class="new"> 525         String[] moduleCode = {</span>
+<span class="new"> 526             "package launcher;",</span>
+<span class="new"> 527             "import java.util.Arrays;",</span>
+<span class="new"> 528             "public class Main {",</span>
+<span class="new"> 529             "public static void main(String[] args) {",</span>
+<span class="new"> 530             "System.out.println(Arrays.toString(args));",</span>
+<span class="new"> 531             "}",</span>
+<span class="new"> 532             "}"</span>
+<span class="new"> 533         };</span>
+<span class="new"> 534         createFile(new File(launcherTestDir, "Main.java"), Arrays.asList(moduleCode));</span>
+<span class="new"> 535     }</span>
+<span class="new"> 536 </span>
+ 537     /*
+ 538      * A class to encapsulate the test results and stuff, with some ease
+ 539      * of use methods to check the test results.
+ 540      */
+ 541     static class TestResult {
+ 542         PrintWriter status;
+ 543         StringWriter sw;
+ 544         int exitValue;
+ 545         List&lt;String&gt; testOutput;
+ 546         Map&lt;String, String&gt; env;
+ 547         Throwable t;
+ 548         boolean testStatus;
+ 549 
+ 550         public TestResult(String str, int rv, List&lt;String&gt; oList,
+ 551                 Map&lt;String, String&gt; env, Throwable t) {
+ 552             sw = new StringWriter();
+ 553             status = new PrintWriter(sw);
+ 554             status.println("Executed command: " + str + "\n");
+ 555             exitValue = rv;
+ 556             testOutput = oList;
+
+</pre><hr></hr>
+</pre></td>
+</tr></table>
+<center><a href='../../../../test/jdk/tools/launcher/ArgsEnvVar.java.sdiff.html' target='_top'>&lt prev</a> <a href='../../../../index.html' target='_top'>index</a> <a href='../../../../test/jdk/tools/launcher/TestSpecialArgs.java.sdiff.html' target='_top'>next &gt</a></center>
+</body></html>

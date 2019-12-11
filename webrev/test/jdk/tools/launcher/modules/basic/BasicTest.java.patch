@@ -1,5 +1,5 @@
---- old/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-09 16:11:40.146838600 -0500
-+++ new/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-09 16:11:33.951952200 -0500
+--- old/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-11 12:49:26.817582700 -0500
++++ new/test/jdk/tools/launcher/modules/basic/BasicTest.java	2019-12-11 12:49:26.247239200 -0500
 @@ -29,6 +29,7 @@
   *          jdk.jlink
   * @build BasicTest jdk.test.lib.compiler.CompilerUtils

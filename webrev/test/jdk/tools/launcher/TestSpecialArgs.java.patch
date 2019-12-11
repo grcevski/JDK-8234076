@@ -1,5 +1,5 @@
---- old/test/jdk/tools/launcher/TestSpecialArgs.java	2019-12-09 16:11:22.369108000 -0500
-+++ new/test/jdk/tools/launcher/TestSpecialArgs.java	2019-12-09 16:11:20.780863000 -0500
+--- old/test/jdk/tools/launcher/TestSpecialArgs.java	2019-12-11 12:49:23.273748000 -0500
++++ new/test/jdk/tools/launcher/TestSpecialArgs.java	2019-12-11 12:49:22.715747300 -0500
 @@ -246,6 +246,10 @@
          if (!tr.contains("Error: Could not find or load main class AbsentClass")) {
              throw new RuntimeException("Test Fails");
